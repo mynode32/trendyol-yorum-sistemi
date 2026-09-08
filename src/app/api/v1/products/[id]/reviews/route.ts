@@ -36,19 +36,28 @@ export async function GET(
   }
   const where = buildReviewWhere(id, query);
 
+  const skip = (query.page - 1) * query.pageSize;
+
+  // sort=longest: yorum uzunluğuna göre sıralama SQL'de ifade edilemediği için tüm
+  // eşleşen kayıtlar çekilip JS'te sıralanır ve sonra sayfalanır. DB seviyesinde
+  // skip/take uygulanırsa yalnızca sayfa içi sıralama yapılmış olur (global değil).
   const [reviews, total] = await Promise.all([
-    prisma.review.findMany({
-      where,
-      orderBy: buildReviewOrderBy(query),
-      skip: (query.page - 1) * query.pageSize,
-      take: query.pageSize,
-    }),
+    query.sort === "longest"
+      ? prisma.review.findMany({ where, orderBy: { reviewDate: "desc" } })
+      : prisma.review.findMany({
+          where,
+          orderBy: buildReviewOrderBy(query),
+          skip,
+          take: query.pageSize,
+        }),
     prisma.review.count({ where }),
   ]);
 
   const data =
     query.sort === "longest"
-      ? [...reviews].sort((a, b) => b.comment.length - a.comment.length)
+      ? [...reviews]
+          .sort((a, b) => b.comment.length - a.comment.length)
+          .slice(skip, skip + query.pageSize)
       : reviews;
 
   return NextResponse.json(

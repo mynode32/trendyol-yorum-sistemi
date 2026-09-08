@@ -41,6 +41,59 @@ describe("GET /api/v1/products/:id/reviews", () => {
     expect(body.pagination).toMatchObject({ page: 1, pageSize: 20, total: 1 });
   });
 
+  it("sort=longest returns the globally longest reviews, not just the longest within a page", async () => {
+    const product = await prisma.product.create({
+      data: { trendyolProductId: "p-longest", trendyolUrl: "https://x", name: "Ürün" },
+    });
+
+    // Yorum uzunlukları alfabetik sıradan bağımsız olsun diye baş harfler kasıtlı
+    // olarak karışık: alfabetik sıralama uzunluk sıralamasıyla aynı sonucu vermez.
+    const seed = [
+      { id: "r1", comment: "z".repeat(10) },
+      { id: "r2", comment: "a".repeat(90) },
+      { id: "r3", comment: "y".repeat(20) },
+      { id: "r4", comment: "b".repeat(80) },
+      { id: "r5", comment: "x".repeat(30) },
+    ];
+
+    await prisma.review.createMany({
+      data: seed.map((s, i) => ({
+        productId: product.id,
+        trendyolReviewId: s.id,
+        rating: 5,
+        comment: s.comment,
+        authorName: "A",
+        reviewDate: new Date(2026, 0, i + 1),
+      })),
+    });
+
+    const response = await GET(
+      makeRequest(`http://localhost/api/v1/products/${product.id}/reviews?sort=longest&pageSize=2`),
+      { params: Promise.resolve({ id: product.id }) }
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.map((r: { trendyolReviewId: string }) => r.trendyolReviewId)).toEqual([
+      "r2",
+      "r4",
+    ]);
+    expect(body.pagination).toMatchObject({ page: 1, pageSize: 2, total: 5 });
+
+    // İkinci sayfa da global sıralamanın devamı olmalı.
+    const page2 = await GET(
+      makeRequest(
+        `http://localhost/api/v1/products/${product.id}/reviews?sort=longest&pageSize=2&page=2`
+      ),
+      { params: Promise.resolve({ id: product.id }) }
+    );
+    const page2Body = await page2.json();
+    expect(page2Body.data.map((r: { trendyolReviewId: string }) => r.trendyolReviewId)).toEqual([
+      "r5",
+      "r3",
+    ]);
+  });
+
   it("returns 400 with an INVALID_QUERY error for a malformed query param", async () => {
     const product = await prisma.product.create({
       data: { trendyolProductId: "p-bad-query", trendyolUrl: "https://x", name: "Ürün" },
