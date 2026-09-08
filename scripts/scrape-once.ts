@@ -13,7 +13,7 @@ async function main() {
     update: {},
     create: {
       trendyolProductId,
-      trendyolUrl: `https://www.trendyol.com/p/${trendyolProductId}`,
+      trendyolUrl: `https://www.trendyol.com/urun-p-${trendyolProductId}`,
       name: `Ürün ${trendyolProductId}`,
     },
   });

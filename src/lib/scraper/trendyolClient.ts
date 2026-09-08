@@ -70,6 +70,10 @@ export async function fetchAllReviewsWithFetcher(
 }
 
 export async function fetchAllReviews(trendyolProductId: string): Promise<ParsedReview[]> {
+  // headless: false ZORUNLU — Cloudflare headless Chromium'u ana sayfa ısınma
+  // isteğinde dahi 403 ile engelliyor (otomasyon parmak izi; headed modda aynı
+  // istek 200 dönüyor). Production'da ekransız bir sunucuda çalıştırmak için Xvfb
+  // (veya benzeri sanal ekran) gerekir — bkz. README "Dağıtım notları".
   const browser = await chromium.launch({ headless: false });
   try {
     const context = await browser.newContext({

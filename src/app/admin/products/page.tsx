@@ -58,7 +58,8 @@ export default function ProductsPage() {
         {products.map((p) => (
           <li key={p.id}>
             {p.name} — {p.isTracked ? "takip ediliyor" : "durduruldu"} — son tarama:{" "}
-            {p.lastScrapedAt ?? "hiç"}
+            {p.lastScrapedAt ?? "hiç"}{" "}
+            <a href={`/admin/products/${p.id}/reviews`}>Yorumları Yönet</a>{" "}
             <button onClick={() => toggleTracked(p)}>
               {p.isTracked ? "Takibi Durdur" : "Takibi Başlat"}
             </button>

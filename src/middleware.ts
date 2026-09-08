@@ -4,7 +4,7 @@ import { verifySessionToken } from "@/lib/auth/session";
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith("/admin/login") || pathname.startsWith("/api/admin/login")) {
+  if (pathname === "/admin/login" || pathname === "/api/admin/login") {
     return NextResponse.next();
   }
 
