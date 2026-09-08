@@ -811,26 +811,23 @@ export async function scrapeProduct(
   try {
     const reviews = await fetchAllReviews(product.trendyolProductId);
 
-    let newCount = 0;
-    for (const review of reviews) {
-      const created = await prisma.review.createMany({
-        data: [
-          {
-            productId: product.id,
-            trendyolReviewId: review.trendyolReviewId,
-            rating: review.rating,
-            comment: review.comment,
-            authorName: review.authorName,
-            hasPhoto: review.hasPhoto,
-            photoUrls: review.photoUrls,
-            reviewDate: review.reviewDate,
-            helpfulCount: review.helpfulCount,
-          },
-        ],
-        skipDuplicates: true,
-      });
-      newCount += created.count;
-    }
+    // Tek toplu insert — döngü içinde tek tek createMany çağırmak yerine (N ürünlü
+    // ürünlerde N ayrı DB round-trip'i anlamına gelir), tüm yorumlar tek seferde yazılır.
+    const created = await prisma.review.createMany({
+      data: reviews.map((review) => ({
+        productId: product.id,
+        trendyolReviewId: review.trendyolReviewId,
+        rating: review.rating,
+        comment: review.comment,
+        authorName: review.authorName,
+        hasPhoto: review.hasPhoto,
+        photoUrls: review.photoUrls,
+        reviewDate: review.reviewDate,
+        helpfulCount: review.helpfulCount,
+      })),
+      skipDuplicates: true,
+    });
+    const newCount = created.count;
 
     await prisma.product.update({
       where: { id: product.id },
