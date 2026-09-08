@@ -1855,12 +1855,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySessionToken } from "@/lib/auth/session";
 
 export function middleware(request: NextRequest) {
-  if (request.nextUrl.pathname.startsWith("/admin/login")) {
+  const { pathname } = request.nextUrl;
+
+  if (pathname.startsWith("/admin/login")) {
     return NextResponse.next();
   }
 
   const token = request.cookies.get("ty_admin_session")?.value;
-  if (!token || !verifySessionToken(token)) {
+  const isAuthenticated = Boolean(token && verifySessionToken(token));
+
+  if (!isAuthenticated) {
+    // /api/admin/* bir JSON API'dir — HTML sayfasına yönlendirmek yerine 401 döner.
+    if (pathname.startsWith("/api/admin")) {
+      return NextResponse.json(
+        { error: { code: "UNAUTHORIZED", message: "Giriş yapmanız gerekiyor" } },
+        { status: 401 }
+      );
+    }
     return NextResponse.redirect(new URL("/admin/login", request.url));
   }
 
@@ -1871,8 +1882,13 @@ export function middleware(request: NextRequest) {
 // middleware varsayılan olarak Edge Runtime'da çalışır ve Edge Runtime Node'un
 // `crypto` modülünü desteklemez; bu olmadan verifySessionToken her zaman başarısız
 // olur ve geçerli oturumlar bile /admin/login'e geri yönlendirilir.
+//
+// matcher HEM /admin/:path* HEM /api/admin/:path* İÇERMELİ (Task 13 implementasyonu
+// sırasında bulundu, gerçek bir güvenlik açığı) — sadece "/admin/:path*" yalnızca
+// sayfaları korur, /api/admin/* altındaki yazma endpoint'leri (ürün ekle/çıkar,
+// yorum gizle/göster) girişsiz herkese açık kalırdı.
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", "/api/admin/:path*"],
   runtime: "nodejs",
 };
 ```
