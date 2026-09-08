@@ -6,7 +6,9 @@
 
 **Architecture:** Next.js (App Router, TypeScript) tek repo içinde hem API route'larını hem admin panel sayfalarını barındırır. Ayrı bir scraper modülü (`src/lib/scraper`) Trendyol'un iç JSON endpoint'ini nazik bir hızda çeker, `Product`/`Review`/`ScrapeLog` tablolarına (PostgreSQL + Prisma) dedup ederek yazar. Widget, API'yi tüketen bağımsız bir JS bundle'ıdır.
 
-**Tech Stack:** Next.js 14+ (App Router) · TypeScript · PostgreSQL · Prisma ORM · Zod (doğrulama) · Vitest (test) · node-cron (zamanlama) · Docker Compose (yerel Postgres)
+**Tech Stack:** Next.js 14+ (App Router) · TypeScript · PostgreSQL · Prisma ORM · Zod (doğrulama) · Vitest (test) · node-cron (zamanlama) · Docker Compose (yerel Postgres) · Playwright (scraper HTTP katmanı — bkz. Task 5 revizyon notu)
+
+**Task 5 revizyon notu (2026-09-08, implementasyon sırasında):** Task 5'in orijinal tasarımı (sade Node `fetch`) implementasyon sırasında gerçek siteye karşı doğrulanınca çalışmadığı ortaya çıktı: Cloudflare, Node'un TLS parmak izini (JA3/JA4) tarayıcı-dışı istemci olarak tanıyıp 403 ile engelliyor — doğru çerezlerle bile. Kullanıcı onayıyla scraper'ın HTTP katmanı Playwright (headless Chromium) kullanacak şekilde revize edildi; aşağıdaki Task 5 metni bu revize tasarımı yansıtır (orijinal sade-fetch tasarımı değil). Detaylar: `.superpowers/sdd/2026-09-08-trendyol-yorum-sistemi/task-5-report.md` ve ledger'daki Ruling 7.
 
 **Spec:** `docs/superpowers/specs/2026-09-08-trendyol-yorum-sistemi-design.md`
 
@@ -451,83 +453,124 @@ git commit -m "feat: Trendyol yorum yanıtını normalize eden parser"
 
 ---
 
-## Task 5: Scraper HTTP İstemcisi (Nezaket Kuralları ile)
+## Task 5: Scraper HTTP İstemcisi (Playwright ile — Nezaket Kuralları ile)
+
+**REVİZE EDİLDİ (2026-09-08):** Orijinal tasarım (sade Node `fetch`) gerçek siteye karşı doğrulanınca Cloudflare'in Node'un TLS parmak izini engellediği ortaya çıktı (bkz. plan başındaki "Task 5 revizyon notu" ve `.superpowers/sdd/2026-09-08-trendyol-yorum-sistemi/task-5-report.md`). Bu görev artık Playwright (headless Chromium) ile gerçek bir tarayıcı network stack'i üzerinden istek atar. Pagination-durdurma mantığı da gerçek keşfe göre güncellendi: `result.summary.totalPages` kullanılıyor (boş sayfa varsayımı yerine — gerçek veride son sayfa boş dönmüyor).
 
 **Files:**
 - Create: `src/lib/scraper/trendyolClient.ts`
 - Test: `src/lib/scraper/trendyolClient.test.ts`
 
 **Interfaces:**
-- Consumes: `docs/trendyol-endpoint-notes.md`'deki URL şablonu (Task 3), `parseReviewResponse` (Task 4)
-- Produces: `fetchAllReviews(trendyolProductId: string): Promise<ParsedReview[]>` — tüm sayfaları gezip birleştirilmiş, parse edilmiş yorum listesi döner. Task 6 (persist) bu fonksiyonu çağırır.
+- Consumes: `docs/trendyol-endpoint-notes.md`'deki gerçek URL şablonu (Task 3), `parseReviewResponse`/`ParsedReview` (Task 4)
+- Produces:
+  - `fetchAllReviews(trendyolProductId: string): Promise<ParsedReview[]>` — Playwright ile gerçek browser üzerinden tüm sayfaları gezip birleştirilmiş yorum listesi döner. Task 6 (persist) bu fonksiyonu çağırır.
+  - `fetchAllReviewsWithFetcher(trendyolProductId: string, fetchPage: PageFetcher): Promise<ParsedReview[]>` — Playwright'tan bağımsız, test edilebilir çekirdek mantık (retry/backoff/pagination). `PageFetcher = (url: string) => Promise<{ status: number; body: string }>`. Testler gerçek Playwright yerine bunu sahte bir `fetchPage` ile çağırır.
 
-- [ ] **Step 1: Başarısız testi yaz — `src/lib/scraper/trendyolClient.test.ts`**
+- [ ] **Step 1: Playwright'ı kur**
+
+```bash
+npm install playwright
+npx playwright install chromium
+```
+
+- [ ] **Step 2: Başarısız testi yaz — `src/lib/scraper/trendyolClient.test.ts`**
 
 ```typescript
-import { describe, it, expect, vi, afterEach } from "vitest";
-import { fetchAllReviews } from "./trendyolClient";
+import { describe, it, expect, vi } from "vitest";
+import { fetchAllReviewsWithFetcher } from "./trendyolClient";
 
-describe("fetchAllReviews", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("paginates until an empty page is returned, then stops", async () => {
-    const page1 = {
-      result: { productReviews: { content: [
-        { id: 1, rate: 5, comment: "Harika", userFullName: "A", commentDateISOtype: "2026-01-01T00:00:00Z" },
-      ] } },
+describe("fetchAllReviewsWithFetcher", () => {
+  it("paginates using result.summary.totalPages, then stops (real last page is not empty)", async () => {
+    const page0 = {
+      isSuccess: true,
+      result: {
+        summary: { totalPages: 2 },
+        reviews: [
+          { id: 1, rate: 5, comment: "Harika", userFullName: "A", likesCount: 0, createdAt: 1700000000000, mediaFiles: [] },
+        ],
+      },
     };
-    const page2 = { result: { productReviews: { content: [] } } };
+    const page1 = {
+      isSuccess: true,
+      result: {
+        summary: { totalPages: 2 },
+        reviews: [
+          { id: 2, rate: 4, comment: "İyi", userFullName: "B", likesCount: 1, createdAt: 1700000100000, mediaFiles: [] },
+        ],
+      },
+    };
 
-    const fetchMock = vi
-      .spyOn(global, "fetch")
-      .mockResolvedValueOnce(new Response(JSON.stringify(page1), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify(page2), { status: 200 }));
+    const fetchPage = vi
+      .fn()
+      .mockResolvedValueOnce({ status: 200, body: JSON.stringify(page0) })
+      .mockResolvedValueOnce({ status: 200, body: JSON.stringify(page1) });
 
-    const reviews = await fetchAllReviews("test-product-id");
+    const reviews = await fetchAllReviewsWithFetcher("1071760667", fetchPage);
 
-    expect(reviews).toHaveLength(1);
+    expect(reviews).toHaveLength(2);
     expect(reviews[0].trendyolReviewId).toBe("1");
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(reviews[1].trendyolReviewId).toBe("2");
+    expect(fetchPage).toHaveBeenCalledTimes(2);
   });
 
   it("retries with backoff on 429, then succeeds", async () => {
     const okPage = {
-      result: { productReviews: { content: [
-        { id: 2, rate: 4, comment: "İyi", userFullName: "B", commentDateISOtype: "2026-01-02T00:00:00Z" },
-      ] } },
+      isSuccess: true,
+      result: {
+        summary: { totalPages: 1 },
+        reviews: [
+          { id: 2, rate: 4, comment: "İyi", userFullName: "B", likesCount: 0, createdAt: 1700000000000, mediaFiles: [] },
+        ],
+      },
     };
-    const emptyPage = { result: { productReviews: { content: [] } } };
 
-    vi.spyOn(global, "fetch")
-      .mockResolvedValueOnce(new Response("rate limited", { status: 429 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify(okPage), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify(emptyPage), { status: 200 }));
+    const fetchPage = vi
+      .fn()
+      .mockResolvedValueOnce({ status: 429, body: "rate limited" })
+      .mockResolvedValueOnce({ status: 200, body: JSON.stringify(okPage) });
 
-    const reviews = await fetchAllReviews("test-product-id");
+    const reviews = await fetchAllReviewsWithFetcher("1071760667", fetchPage);
 
     expect(reviews).toHaveLength(1);
     expect(reviews[0].trendyolReviewId).toBe("2");
   }, 10000);
+
+  it("falls back to stopping on an empty page if totalPages is ever missing", async () => {
+    const pageNoSummary = {
+      isSuccess: true,
+      result: { reviews: [] },
+    };
+
+    const fetchPage = vi.fn().mockResolvedValueOnce({ status: 200, body: JSON.stringify(pageNoSummary) });
+
+    const reviews = await fetchAllReviewsWithFetcher("1071760667", fetchPage);
+
+    expect(reviews).toHaveLength(0);
+    expect(fetchPage).toHaveBeenCalledTimes(1);
+  });
 });
 ```
 
-- [ ] **Step 2: Testi çalıştır, başarısız olduğunu doğrula**
+- [ ] **Step 3: Testi çalıştır, başarısız olduğunu doğrula**
 
 ```bash
 npm run test -- trendyolClient.test.ts
 ```
 
-Beklenen: FAIL — modül/`fetchAllReviews` bulunamadı.
+Beklenen: FAIL — modül/`fetchAllReviewsWithFetcher` bulunamadı.
 
-- [ ] **Step 3: `src/lib/scraper/trendyolClient.ts` implementasyonu**
+- [ ] **Step 4: `src/lib/scraper/trendyolClient.ts` implementasyonu**
 
 ```typescript
+import { chromium } from "playwright";
 import { parseReviewResponse, type ParsedReview } from "./parser";
 
 const BACKOFF_MS = [5000, 15000, 45000];
 const REQUEST_DELAY_RANGE_MS: [number, number] = [1000, 3000];
+const WARMUP_URL = "https://www.trendyol.com/";
+
+export type PageFetcher = (url: string) => Promise<{ status: number; body: string }>;
 
 function randomDelay(): Promise<void> {
   const [min, max] = REQUEST_DELAY_RANGE_MS;
@@ -536,68 +579,114 @@ function randomDelay(): Promise<void> {
 }
 
 function buildReviewUrl(trendyolProductId: string, page: number): string {
-  // URL şablonu docs/trendyol-endpoint-notes.md içindeki keşfe göre doldurulmalıdır.
-  return `https://public-mdc.trendyol.com/discovery-web-websfxsocialreviewwebservice/reviews?productId=${trendyolProductId}&page=${page}`;
+  return `https://apigw.trendyol.com/discovery-storefront-trproductgw-service/api/review-read/product-reviews/detailed?contentId=${trendyolProductId}&page=${page}&pageSize=20&order=DESC&orderBy=Score&channelId=1`;
 }
 
-async function fetchPageWithRetry(url: string, attempt = 0): Promise<unknown> {
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
-    },
-  });
+async function fetchWithRetry(
+  fetchPage: PageFetcher,
+  url: string,
+  attempt = 0
+): Promise<unknown> {
+  const { status, body } = await fetchPage(url);
 
-  if (response.status === 429 || response.status === 403) {
+  if (status === 429 || status === 403) {
     if (attempt >= BACKOFF_MS.length) {
       throw new Error(`Rate limited after ${BACKOFF_MS.length} retries: ${url}`);
     }
     await new Promise((resolve) => setTimeout(resolve, BACKOFF_MS[attempt]));
-    return fetchPageWithRetry(url, attempt + 1);
+    return fetchWithRetry(fetchPage, url, attempt + 1);
   }
 
-  if (!response.ok) {
-    throw new Error(`Unexpected status ${response.status} for ${url}`);
+  if (status < 200 || status >= 300) {
+    throw new Error(`Unexpected status ${status} for ${url}`);
   }
 
-  return response.json();
+  return JSON.parse(body);
 }
 
-export async function fetchAllReviews(trendyolProductId: string): Promise<ParsedReview[]> {
+export async function fetchAllReviewsWithFetcher(
+  trendyolProductId: string,
+  fetchPage: PageFetcher
+): Promise<ParsedReview[]> {
   const allReviews: ParsedReview[] = [];
   let page = 0;
+  let totalPages: number | undefined;
 
   while (true) {
     const url = buildReviewUrl(trendyolProductId, page);
-    const raw = await fetchPageWithRetry(url);
+    const raw = (await fetchWithRetry(fetchPage, url)) as {
+      result?: { summary?: { totalPages?: number } };
+    };
     const pageReviews = parseReviewResponse(raw);
+    allReviews.push(...pageReviews);
 
-    if (pageReviews.length === 0) {
+    totalPages = raw.result?.summary?.totalPages ?? totalPages;
+    page += 1;
+
+    const reachedTotalPages = totalPages !== undefined && page >= totalPages;
+    if (pageReviews.length === 0 || reachedTotalPages) {
       break;
     }
 
-    allReviews.push(...pageReviews);
-    page += 1;
     await randomDelay();
   }
 
   return allReviews;
 }
+
+export async function fetchAllReviews(trendyolProductId: string): Promise<ParsedReview[]> {
+  const browser = await chromium.launch();
+  try {
+    const context = await browser.newContext({
+      locale: "tr-TR",
+    });
+    const page = await context.newPage();
+    // Isınma ziyareti: gerçek tarayıcı network stack'i üzerinden storefront/ülke çerezlerini alır.
+    await page.goto(WARMUP_URL, { waitUntil: "domcontentloaded" });
+
+    const fetchPage: PageFetcher = (url) =>
+      page.evaluate(async (targetUrl) => {
+        const res = await fetch(targetUrl);
+        const body = await res.text();
+        return { status: res.status, body };
+      }, url);
+
+    return await fetchAllReviewsWithFetcher(trendyolProductId, fetchPage);
+  } finally {
+    await browser.close();
+  }
+}
 ```
 
-- [ ] **Step 4: Testi tekrar çalıştır**
+- [ ] **Step 5: Testi tekrar çalıştır**
 
 ```bash
 npm run test -- trendyolClient.test.ts
 ```
 
-Beklenen: PASS.
+Beklenen: PASS (3/3) — bu testler gerçek Playwright/tarayıcı başlatmaz, sadece `fetchAllReviewsWithFetcher`'ı sahte bir `fetchPage` ile çağırır.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Tek seferlik manuel doğrulama — gerçek `fetchAllReviews` gerçek siteye karşı çalışıyor mu**
+
+Bu adım otomatik teste dönüştürülmez (gerçek siteye karşı otomatik test çalıştırmak nezaket kurallarına aykırı olur), ama implementasyonun gerçekten işe yaradığını bir kez elle doğrulayın:
 
 ```bash
-git add src/lib/scraper/trendyolClient.ts src/lib/scraper/trendyolClient.test.ts
-git commit -m "feat: nezaket kurallarına uyan Trendyol HTTP istemcisi (sayfalama + backoff)"
+npx tsx -e "
+import('./src/lib/scraper/trendyolClient').then(async (m) => {
+  const reviews = await m.fetchAllReviews('1071760667');
+  console.log('Toplam yorum:', reviews.length);
+  console.log('İlk yorum:', reviews[0]);
+});
+"
+```
+
+Beklenen: Cloudflare/ülke hatası olmadan gerçek yorumlar dönmeli (bu ürün için toplam 30 yorum bekleniyor, bkz. Task 3 notları). Sonucu (yorum sayısı, örnek bir yorum) raporunuza ekleyin.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add src/lib/scraper/trendyolClient.ts src/lib/scraper/trendyolClient.test.ts package.json package-lock.json
+git commit -m "feat: Playwright tabanlı Trendyol HTTP istemcisi (sayfalama + backoff + oturum ısınması)"
 ```
 
 ---
