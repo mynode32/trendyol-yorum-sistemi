@@ -10,6 +10,15 @@ type ReviewItem = {
   reviewDate: string;
 };
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export async function renderReviewWidget(container: HTMLElement, options: WidgetOptions) {
   const { apiBaseUrl, productId } = options;
 
@@ -32,7 +41,7 @@ export async function renderReviewWidget(container: HTMLElement, options: Widget
             .map(
               (r) => `
             <li class="ty-widget__item">
-              <strong>${r.rating}★</strong> ${r.authorName}: ${r.comment}
+              <strong>${r.rating}★</strong> ${escapeHtml(r.authorName)}: ${escapeHtml(r.comment)}
             </li>`
             )
             .join("")}
