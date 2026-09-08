@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { CORS_HEADERS } from "@/lib/api/cors";
+
+export function OPTIONS() {
+  return new Response(null, { status: 204, headers: CORS_HEADERS });
+}
 
 export async function GET(
   _request: Request,
@@ -11,7 +16,7 @@ export async function GET(
   if (!product) {
     return NextResponse.json(
       { error: { code: "PRODUCT_NOT_FOUND", message: "Ürün bulunamadı" } },
-      { status: 404 }
+      { status: 404, headers: CORS_HEADERS }
     );
   }
 
@@ -33,9 +38,12 @@ export async function GET(
     ratingSum += group.rating * group._count.rating;
   }
 
-  return NextResponse.json({
-    averageRating: totalReviews > 0 ? ratingSum / totalReviews : 0,
-    totalReviews,
-    ratingCounts,
-  });
+  return NextResponse.json(
+    {
+      averageRating: totalReviews > 0 ? ratingSum / totalReviews : 0,
+      totalReviews,
+      ratingCounts,
+    },
+    { headers: CORS_HEADERS }
+  );
 }

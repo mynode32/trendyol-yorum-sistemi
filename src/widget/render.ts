@@ -41,7 +41,7 @@ export async function renderReviewWidget(container: HTMLElement, options: Widget
             .map(
               (r) => `
             <li class="ty-widget__item">
-              <strong>${r.rating}★</strong> ${escapeHtml(r.authorName)}: ${escapeHtml(r.comment)}
+              <strong>${escapeHtml(String(r.rating))}★</strong> ${escapeHtml(r.authorName)}: ${escapeHtml(r.comment)}
             </li>`
             )
             .join("")}
