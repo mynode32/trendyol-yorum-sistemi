@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { parseReviewQuery, buildReviewWhere, buildReviewOrderBy } from "./filters";
+import {
+  parseReviewQuery,
+  buildReviewWhere,
+  buildReviewOrderBy,
+  InvalidQueryError,
+} from "./filters";
 
 describe("parseReviewQuery", () => {
   it("parses stars, date range, hasPhoto, q, sort, pagination with defaults", () => {
@@ -29,6 +34,32 @@ describe("parseReviewQuery", () => {
   it("caps pageSize at 100", () => {
     const query = parseReviewQuery(new URLSearchParams("pageSize=500"));
     expect(query.pageSize).toBe(100);
+  });
+
+  it.each([
+    ["page=abc"],
+    ["page=0"],
+    ["page=1.5"],
+    ["pageSize=abc"],
+    ["pageSize=0"],
+    ["dateFrom=not-a-date"],
+    ["dateTo=2026-13-45"],
+    ["stars=9,0"],
+    ["stars=abc"],
+    ["sort=random"],
+  ])("throws InvalidQueryError for %s", (queryString) => {
+    expect(() => parseReviewQuery(new URLSearchParams(queryString))).toThrow(InvalidQueryError);
+  });
+
+  it("reports every invalid parameter in one error message", () => {
+    try {
+      parseReviewQuery(new URLSearchParams("page=abc&sort=random"));
+      throw new Error("beklenen hata fırlatılmadı");
+    } catch (error) {
+      expect(error).toBeInstanceOf(InvalidQueryError);
+      expect((error as Error).message).toContain("page");
+      expect((error as Error).message).toContain("sort");
+    }
   });
 });
 

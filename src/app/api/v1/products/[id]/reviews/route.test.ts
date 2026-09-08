@@ -41,6 +41,22 @@ describe("GET /api/v1/products/:id/reviews", () => {
     expect(body.pagination).toMatchObject({ page: 1, pageSize: 20, total: 1 });
   });
 
+  it("returns 400 with an INVALID_QUERY error for a malformed query param", async () => {
+    const product = await prisma.product.create({
+      data: { trendyolProductId: "p-bad-query", trendyolUrl: "https://x", name: "Ürün" },
+    });
+
+    const response = await GET(
+      makeRequest(`http://localhost/api/v1/products/${product.id}/reviews?page=abc`),
+      { params: Promise.resolve({ id: product.id }) }
+    );
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error.code).toBe("INVALID_QUERY");
+    expect(body.error.message).toContain("page");
+  });
+
   it("returns 404 for an unknown product id", async () => {
     const response = await GET(makeRequest("http://localhost/api/v1/products/does-not-exist/reviews"), {
       params: Promise.resolve({ id: "does-not-exist" }),

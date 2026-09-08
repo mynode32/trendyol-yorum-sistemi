@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { prisma } from "@/lib/db";
 import { GET, POST } from "./route";
+import { PATCH } from "./[id]/route";
 
 describe("/api/admin/products", () => {
   beforeEach(async () => {
@@ -49,5 +50,17 @@ describe("/api/admin/products", () => {
 
     const response = await POST(request);
     expect(response.status).toBe(400);
+  });
+
+  it("returns 404 instead of 500 when patching an unknown product id", async () => {
+    const request = new Request("http://localhost/api/admin/products/does-not-exist", {
+      method: "PATCH",
+      body: JSON.stringify({ isTracked: false }),
+    });
+    const response = await PATCH(request, { params: Promise.resolve({ id: "does-not-exist" }) });
+
+    expect(response.status).toBe(404);
+    const body = await response.json();
+    expect(body.error.code).toBe("NOT_FOUND");
   });
 });

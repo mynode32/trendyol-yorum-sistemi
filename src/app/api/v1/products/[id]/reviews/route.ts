@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { CORS_HEADERS } from "@/lib/api/cors";
-import { parseReviewQuery, buildReviewWhere, buildReviewOrderBy } from "@/lib/reviews/filters";
+import { jsonError } from "@/lib/api/errors";
+import {
+  parseReviewQuery,
+  buildReviewWhere,
+  buildReviewOrderBy,
+  InvalidQueryError,
+} from "@/lib/reviews/filters";
 
 export function OPTIONS() {
   return new Response(null, { status: 204, headers: CORS_HEADERS });
@@ -15,14 +21,19 @@ export async function GET(
 
   const product = await prisma.product.findUnique({ where: { id } });
   if (!product) {
-    return NextResponse.json(
-      { error: { code: "PRODUCT_NOT_FOUND", message: "Ürün bulunamadı" } },
-      { status: 404, headers: CORS_HEADERS }
-    );
+    return jsonError("PRODUCT_NOT_FOUND", "Ürün bulunamadı", 404, CORS_HEADERS);
   }
 
   const url = new URL(request.url);
-  const query = parseReviewQuery(url.searchParams);
+  let query;
+  try {
+    query = parseReviewQuery(url.searchParams);
+  } catch (error) {
+    if (error instanceof InvalidQueryError) {
+      return jsonError("INVALID_QUERY", error.message, 400, CORS_HEADERS);
+    }
+    throw error;
+  }
   const where = buildReviewWhere(id, query);
 
   const [reviews, total] = await Promise.all([

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { CORS_HEADERS } from "@/lib/api/cors";
+import { jsonError } from "@/lib/api/errors";
 
 export function OPTIONS() {
   return new Response(null, { status: 204, headers: CORS_HEADERS });
@@ -14,10 +15,7 @@ export async function GET(
 
   const product = await prisma.product.findUnique({ where: { id } });
   if (!product) {
-    return NextResponse.json(
-      { error: { code: "PRODUCT_NOT_FOUND", message: "Ürün bulunamadı" } },
-      { status: 404, headers: CORS_HEADERS }
-    );
+    return jsonError("PRODUCT_NOT_FOUND", "Ürün bulunamadı", 404, CORS_HEADERS);
   }
 
   const baseWhere = { productId: id, isApproved: true, isHidden: false };

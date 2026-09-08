@@ -32,4 +32,16 @@ describe("PATCH /api/admin/reviews/:id", () => {
     expect(response.status).toBe(200);
     expect(body.isHidden).toBe(true);
   });
+
+  it("returns 404 instead of 500 for an unknown review id", async () => {
+    const request = new Request("http://localhost/api/admin/reviews/does-not-exist", {
+      method: "PATCH",
+      body: JSON.stringify({ isHidden: true }),
+    });
+    const response = await PATCH(request, { params: Promise.resolve({ id: "does-not-exist" }) });
+
+    expect(response.status).toBe(404);
+    const body = await response.json();
+    expect(body.error.code).toBe("NOT_FOUND");
+  });
 });

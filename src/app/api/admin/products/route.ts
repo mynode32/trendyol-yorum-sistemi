@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { jsonError } from "@/lib/api/errors";
 
 function extractProductId(trendyolUrl: string): string | null {
   const match = trendyolUrl.match(/-p-(\d+)/);
@@ -16,10 +17,7 @@ export async function POST(request: Request) {
 
   const trendyolProductId = trendyolUrl ? extractProductId(trendyolUrl) : null;
   if (!trendyolProductId) {
-    return NextResponse.json(
-      { error: { code: "INVALID_URL", message: "Ürün ID'si URL'den çıkarılamadı" } },
-      { status: 400 }
-    );
+    return jsonError("INVALID_URL", "Ürün ID'si URL'den çıkarılamadı", 400);
   }
 
   const product = await prisma.product.create({
