@@ -8,6 +8,7 @@ function makeRequest(url: string) {
 
 describe("GET /api/v1/products/:id/reviews", () => {
   beforeEach(async () => {
+    await prisma.scrapeLog.deleteMany();
     await prisma.review.deleteMany();
     await prisma.product.deleteMany();
   });
