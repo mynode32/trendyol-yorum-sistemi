@@ -1,11 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type Product = { id: string; name: string; trendyolUrl: string; isTracked: boolean; lastScrapedAt: string | null };
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [newUrl, setNewUrl] = useState("");
+  const router = useRouter();
 
   async function load() {
     const res = await fetch("/api/admin/products");
@@ -39,7 +41,7 @@ export default function ProductsPage() {
 
   async function logout() {
     await fetch("/api/admin/logout", { method: "POST" });
-    window.location.href = "/admin/login";
+    router.push("/admin/login");
   }
 
   return (

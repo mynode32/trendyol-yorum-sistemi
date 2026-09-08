@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // esbuild ile üretilen widget bundle'ı (kaynak: src/widget/)
+    "public/widget/**",
   ]),
 ]);
 
