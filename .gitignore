@@ -37,6 +37,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# local dev Postgres cluster (native binaries fallback, no Docker on this machine)
+/.devdb/
+.devdb.log
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
