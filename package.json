@@ -9,11 +9,13 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "scrape:once": "tsx scripts/scrape-once.ts"
+    "scrape:once": "tsx scripts/scrape-once.ts",
+    "scheduler:start": "tsx scripts/run-scheduler.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
     "next": "16.3.4",
+    "node-cron": "^4.6.0",
     "playwright": "^1.63.0",
     "prisma": "^6.19.3",
     "react": "19.2.8",
@@ -22,6 +24,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
+    "@types/node-cron": "^3.0.11",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.1.1",
