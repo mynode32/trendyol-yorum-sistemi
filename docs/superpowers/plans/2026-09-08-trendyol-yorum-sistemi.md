@@ -8,7 +8,11 @@
 
 **Tech Stack:** Next.js 14+ (App Router) · TypeScript · PostgreSQL · Prisma ORM · Zod (doğrulama) · Vitest (test) · node-cron (zamanlama) · Docker Compose (yerel Postgres) · Playwright (scraper HTTP katmanı — bkz. Task 5 revizyon notu)
 
-**Task 5 revizyon notu (2026-09-08, implementasyon sırasında):** Task 5'in orijinal tasarımı (sade Node `fetch`) implementasyon sırasında gerçek siteye karşı doğrulanınca çalışmadığı ortaya çıktı: Cloudflare, Node'un TLS parmak izini (JA3/JA4) tarayıcı-dışı istemci olarak tanıyıp 403 ile engelliyor — doğru çerezlerle bile. Kullanıcı onayıyla scraper'ın HTTP katmanı Playwright (headless Chromium) kullanacak şekilde revize edildi; aşağıdaki Task 5 metni bu revize tasarımı yansıtır (orijinal sade-fetch tasarımı değil). Detaylar: `.superpowers/sdd/2026-09-08-trendyol-yorum-sistemi/task-5-report.md` ve ledger'daki Ruling 7.
+**Task 5 revizyon notu (2026-09-08, implementasyon sırasında):**
+1. Task 5'in orijinal tasarımı (sade Node `fetch`) gerçek siteye karşı doğrulanınca çalışmadı: Cloudflare, Node'un TLS parmak izini (JA3/JA4) tarayıcı-dışı istemci olarak tanıyıp 403 ile engelliyor — doğru çerezlerle bile. Kullanıcı onayıyla scraper'ın HTTP katmanı Playwright'a (Chromium) geçirildi.
+2. İlk Playwright denemesi de (headless) gerçek siteye karşı başarısız oldu: Cloudflare headless Chromium'u da ana sayfa ısınma isteğinde 403 ile engelliyor (muhtemelen otomasyon parmak izi — `navigator.webdriver` vb. — TLS değil). **headed** modda (`headless: false`) aynı istek 200 dönüyor, gerçek çerezler alınıyor — bu makinede doğrulandı. Ayrıca API isteğine `credentials: 'include'` eklenmesi gerekiyordu (çapraz-origin istekte çerezler otomatik gitmiyor). Kullanıcı onayıyla Task 5 `headless: false` + `credentials: 'include'` ile devam ediyor. **Production'da ekransız (headless sunucu) ortamda çalıştırmak için Xvfb (veya benzeri sanal ekran) gerekecek** — bu bir deployment/altyapı notu, Task 5'in kod kapsamı dışında.
+
+Aşağıdaki Task 5 metni bu revize (headed + credentials) tasarımı yansıtır. Detaylar: `.superpowers/sdd/2026-09-08-trendyol-yorum-sistemi/task-5-report.md` ve ledger'daki Ruling 7/8.
 
 **Spec:** `docs/superpowers/specs/2026-09-08-trendyol-yorum-sistemi-design.md`
 
@@ -635,7 +639,10 @@ export async function fetchAllReviewsWithFetcher(
 }
 
 export async function fetchAllReviews(trendyolProductId: string): Promise<ParsedReview[]> {
-  const browser = await chromium.launch();
+  // headless: false ZORUNLU — Cloudflare headless Chromium'u ana sayfa ısınma isteğinde
+  // dahi 403 ile engelliyor (bkz. plan başındaki Task 5 revizyon notu #2). Production'da
+  // ekransız çalıştırmak için Xvfb (veya benzeri sanal ekran) gerekir.
+  const browser = await chromium.launch({ headless: false });
   try {
     const context = await browser.newContext({
       locale: "tr-TR",
@@ -646,7 +653,10 @@ export async function fetchAllReviews(trendyolProductId: string): Promise<Parsed
 
     const fetchPage: PageFetcher = (url) =>
       page.evaluate(async (targetUrl) => {
-        const res = await fetch(targetUrl);
+        // credentials: 'include' ZORUNLU — apigw.trendyol.com, www.trendyol.com'dan farklı
+        // bir origin; bu olmadan storefront/ülke çerezleri çapraz-origin istekte gönderilmez
+        // ve API "Required country information is wrong or missing" hatası döner.
+        const res = await fetch(targetUrl, { credentials: "include" });
         const body = await res.text();
         return { status: res.status, body };
       }, url);
