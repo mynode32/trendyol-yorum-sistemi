@@ -1747,11 +1747,16 @@ export function createSessionToken(): string {
   return Buffer.from(`${payload}.${signature}`).toString("base64url");
 }
 
+// HEX_SHA256 kontrolü ZORUNLU (Task 12 implementasyonu sırasında bulundu) —
+// Buffer.from(str, "hex") geçersiz/eksik hex karakterlerini sessizce keser,
+// bu da kurcalanmış (tampered) bir token'ın yanlışlıkla geçerli sayılmasına yol açabilir.
+const HEX_SHA256 = /^[0-9a-f]{64}$/;
+
 export function verifySessionToken(token: string): boolean {
   try {
     const decoded = Buffer.from(token, "base64url").toString("utf-8");
     const [payload, signature] = decoded.split(".");
-    if (!payload || !signature) return false;
+    if (!payload || !signature || !HEX_SHA256.test(signature)) return false;
 
     const expected = createHmac("sha256", getSecret()).update(payload).digest("hex");
     const expectedBuf = Buffer.from(expected, "hex");
@@ -1862,8 +1867,13 @@ export function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
+// runtime: "nodejs" ZORUNLU (Task 12 implementasyonu sırasında bulundu) — Next.js
+// middleware varsayılan olarak Edge Runtime'da çalışır ve Edge Runtime Node'un
+// `crypto` modülünü desteklemez; bu olmadan verifySessionToken her zaman başarısız
+// olur ve geçerli oturumlar bile /admin/login'e geri yönlendirilir.
 export const config = {
   matcher: ["/admin/:path*"],
+  runtime: "nodejs",
 };
 ```
 
