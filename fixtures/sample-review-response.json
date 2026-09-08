@@ -1,0 +1,740 @@
+{
+  "isSuccess": true,
+  "statusCode": 200,
+  "result": {
+    "aiSummary": "• Ürün, kurulumu kolay ve pratik bir deneyim sunuyor.\n• Farklı kullanım alanlarına uyum sağlayarak çeşitli amaçlarla kullanılabilir.\n• Şık ve estetik tasarımıyla mekanın atmosferini değiştiriyor.\n• Ürünün kaliteli malzemesi ve işçiliği övgüyle karşılanıyor.\n• Satıcının ilgili ve çözüm odaklı yaklaşımı müşteri memnuniyetini artırıyor.",
+    "summary": {
+      "averageRating": 4.9,
+      "averageRatingFixed": "4.9",
+      "countries": [
+        {
+          "country": "TR",
+          "reviewsExist": true
+        }
+      ],
+      "totalRatingCount": 55,
+      "totalCommentCount": 30,
+      "totalPages": 2,
+      "hasMediaFiles": true,
+      "totalImageReviewCount": 17,
+      "productSizes": [],
+      "imageUrl": "https://cdn.dsmcdn.com/mnresize/30/30/mobile/reviewrating/kamera-emoji6x.png",
+      "heightTags": [],
+      "weightTags": [],
+      "ratingCounts": [
+        {
+          "rate": 5,
+          "count": 53,
+          "commentCount": 30
+        },
+        {
+          "rate": 4,
+          "count": 1,
+          "commentCount": 0
+        },
+        {
+          "rate": 3,
+          "count": 1,
+          "commentCount": 0
+        },
+        {
+          "rate": 2,
+          "count": 0,
+          "commentCount": 0
+        },
+        {
+          "rate": 1,
+          "count": 0,
+          "commentCount": 0
+        }
+      ],
+      "tags": [
+        {
+          "name": "tümü",
+          "count": 30
+        },
+        {
+          "name": "fotoğraflı",
+          "count": 17,
+          "imageUrl": "https://cdn.dsmcdn.com/mobile/reviewrating/kamera-emoji6x.png"
+        },
+        {
+          "name": "Kurulum/Kullanım",
+          "count": 9,
+          "sentiment": {
+            "positive": 8,
+            "negative": 1,
+            "ratio": 89
+          }
+        },
+        {
+          "name": "Teslimat Süresi",
+          "count": 4,
+          "sentiment": {
+            "positive": 4,
+            "ratio": 100
+          }
+        },
+        {
+          "name": "Renk Özelliği",
+          "count": 3,
+          "sentiment": {
+            "positive": 2,
+            "negative": 1,
+            "ratio": 67
+          }
+        },
+        {
+          "name": "Paketleme",
+          "count": 2
+        },
+        {
+          "name": "Fiyat",
+          "count": 2
+        },
+        {
+          "name": "Kalite",
+          "count": 2
+        },
+        {
+          "name": "Kargolama",
+          "count": 2
+        },
+        {
+          "name": "Rahatlık",
+          "count": 1
+        },
+        {
+          "name": "Hasarlı/Sağlam Kargo",
+          "count": 1
+        },
+        {
+          "name": "Şıklık",
+          "count": 1
+        }
+      ]
+    },
+    "reviews": [
+      {
+        "id": 642423344,
+        "contentId": 1071760667,
+        "userFullName": "Kullanıcı A",
+        "showUserFullName": false,
+        "isElite": false,
+        "isInfluencer": false,
+        "seller": {
+          "id": 1161564,
+          "name": "Sedefira"
+        },
+        "rate": 5,
+        "comment": "Harika salonuma da alacağım bayıldım",
+        "likesCount": 1,
+        "language": "tr",
+        "createdAt": 1781112455693,
+        "lastModifiedAt": 1781112477997,
+        "mediaFiles": [
+          {
+            "id": 139103679,
+            "url": "https://cdn.dsmcdn.com/mnresize/-/820/prod-product-review-media_1777680012294/img/2019922/2025904/2029892/1071760667/16428451-1781112476912.jpeg",
+            "thumbnailUrl": "https://cdn.dsmcdn.com/mnresize/300/300/prod-product-review-media_1777680012294/img/2019922/2025904/2029892/1071760667/16428451-1781112476912.jpeg",
+            "mediaType": "IMAGE",
+            "height": 4284,
+            "weight": 5712
+          }
+        ],
+        "trusted": true,
+        "culture": "tr-TR",
+        "sourceChannelId": 1
+      },
+      {
+        "id": 626256977,
+        "contentId": 1071760667,
+        "userFullName": "Kullanıcı B",
+        "showUserFullName": false,
+        "isElite": false,
+        "isInfluencer": false,
+        "seller": {
+          "id": 1161564,
+          "name": "Sedefira"
+        },
+        "rate": 5,
+        "comment": "çok şık ellerinize sağlık, emeği geçen herkese sonsuz teşekkürler.",
+        "likesCount": 1,
+        "language": "tr",
+        "createdAt": 1775134361251,
+        "lastModifiedAt": 1775134361251,
+        "mediaFiles": [
+          {
+            "id": 136203228,
+            "url": "https://cdn.dsmcdn.com/mnresize/-/820/prod-product-review-media_1768435207133/img/2019922/2023910/2021916/1071760667/130012621-1775134360054.jpeg",
+            "thumbnailUrl": "https://cdn.dsmcdn.com/mnresize/300/300/prod-product-review-media_1768435207133/img/2019922/2023910/2021916/1071760667/130012621-1775134360054.jpeg",
+            "mediaType": "IMAGE",
+            "height": 4080,
+            "weight": 3060
+          }
+        ],
+        "trusted": true,
+        "culture": "tr-TR",
+        "sourceChannelId": 1
+      },
+      {
+        "id": 614977243,
+        "contentId": 1071760667,
+        "userFullName": "Kullanıcı C",
+        "showUserFullName": false,
+        "isElite": false,
+        "isInfluencer": false,
+        "seller": {
+          "id": 1161564,
+          "name": "Sedefira"
+        },
+        "rate": 5,
+        "comment": "Ürünler sanki evim için tasarlanmış harika işçilik harika emek yapan ustadan Allah razı olsun bol kazançlı bereketli olsun aldığı para sonuna kadar helali hoş olsun harika üretim tavsiye ederim",
+        "likesCount": 3,
+        "language": "tr",
+        "createdAt": 1771868568234,
+        "lastModifiedAt": 1771868568234,
+        "mediaFiles": [
+          {
+            "id": 134304735,
+            "url": "https://cdn.dsmcdn.com/mnresize/-/820/prod-product-review-media_1768435207133/img/2019922/2021916/2042853/1071760667/83025015-1771868567025.jpeg",
+            "thumbnailUrl": "https://cdn.dsmcdn.com/mnresize/300/300/prod-product-review-media_1768435207133/img/2019922/2021916/2042853/1071760667/83025015-1771868567025.jpeg",
+            "mediaType": "IMAGE",
+            "height": 3024,
+            "weight": 4032
+          },
+          {
+            "id": 134304733,
+            "url": "https://cdn.dsmcdn.com/mnresize/-/820/prod-product-review-media_1768435207133/img/2019922/2021916/2042853/1071760667/83025015-1771868564364.jpeg",
+            "thumbnailUrl": "https://cdn.dsmcdn.com/mnresize/300/300/prod-product-review-media_1768435207133/img/2019922/2021916/2042853/1071760667/83025015-1771868564364.jpeg",
+            "mediaType": "IMAGE",
+            "height": 4284,
+            "weight": 5712
+          },
+          {
+            "id": 134304734,
+            "url": "https://cdn.dsmcdn.com/mnresize/-/820/prod-product-review-media_1768435207133/img/2019922/2021916/2042853/1071760667/83025015-1771868565721.jpeg",
+            "thumbnailUrl": "https://cdn.dsmcdn.com/mnresize/300/300/prod-product-review-media_1768435207133/img/2019922/2021916/2042853/1071760667/83025015-1771868565721.jpeg",
+            "mediaType": "IMAGE",
+            "height": 4284,
+            "weight": 5712
+          }
+        ],
+        "trusted": true,
+        "culture": "tr-TR",
+        "sourceChannelId": 1
+      },
+      {
+        "id": 649636823,
+        "contentId": 1071760667,
+        "userFullName": "Kullanıcı D",
+        "showUserFullName": true,
+        "isElite": false,
+        "isInfluencer": false,
+        "seller": {
+          "id": 1161564,
+          "name": "Sedefira"
+        },
+        "rate": 5,
+        "comment": "çok güzel oldu teşekkürler kargo harika sarılmıştı ve hızlı ulaştı",
+        "likesCount": 0,
+        "language": "tr",
+        "createdAt": 1784064036926,
+        "lastModifiedAt": 1784064058272,
+        "mediaFiles": [],
+        "trusted": true,
+        "culture": "tr-TR",
+        "sourceChannelId": 1
+      },
+      {
+        "id": 617041032,
+        "contentId": 1071760667,
+        "userFullName": "Kullanıcı E",
+        "showUserFullName": false,
+        "isElite": false,
+        "isInfluencer": false,
+        "seller": {
+          "id": 1161564,
+          "name": "Sedefira"
+        },
+        "rate": 5,
+        "comment": "O kadar beğendim ki... Rengini daha koyu beklerken tam istediğim gibi gelmesi müthiş oldu. Görseldeki renkten daha güzel bir renk olmuş. Montajı inanılmaz kolay. Hızlı gönderildi.Teşekkür ederim.",
+        "likesCount": 1,
+        "language": "tr",
+        "createdAt": 1772501230923,
+        "lastModifiedAt": 1772501230923,
+        "mediaFiles": [
+          {
+            "id": 134657895,
+            "url": "https://cdn.dsmcdn.com/mnresize/-/820/prod-product-review-media_1768435207133/img/2019922/2022913/2022913/1071760667/10716018-1772501227430.jpeg",
+            "thumbnailUrl": "https://cdn.dsmcdn.com/mnresize/300/300/prod-product-review-media_1768435207133/img/2019922/2022913/2022913/1071760667/10716018-1772501227430.jpeg",
+            "mediaType": "IMAGE",
+            "height": 4096,
+            "weight": 3072
+          },
+          {
+            "id": 134657894,
+            "url": "https://cdn.dsmcdn.com/mnresize/-/820/prod-product-review-media_1768435207133/img/2019922/2022913/2022913/1071760667/10716018-1772501225737.jpeg",
+            "thumbnailUrl": "https://cdn.dsmcdn.com/mnresize/300/300/prod-product-review-media_1768435207133/img/2019922/2022913/2022913/1071760667/10716018-1772501225737.jpeg",
+            "mediaType": "IMAGE",
+            "height": 4096,
+            "weight": 3072
+          },
+          {
+            "id": 134657896,
+            "url": "https://cdn.dsmcdn.com/mnresize/-/820/prod-product-review-media_1768435207133/img/2019922/2022913/2022913/1071760667/10716018-1772501228959.jpeg",
+            "thumbnailUrl": "https://cdn.dsmcdn.com/mnresize/300/300/prod-product-review-media_1768435207133/img/2019922/2022913/2022913/1071760667/10716018-1772501228959.jpeg",
+            "mediaType": "IMAGE",
+            "height": 4096,
+            "weight": 3072
+          }
+        ],
+        "trusted": true,
+        "culture": "tr-TR",
+        "sourceChannelId": 1
+      },
+      {
+        "id": 622083437,
+        "contentId": 1071760667,
+        "userFullName": "Kullanıcı F",
+        "showUserFullName": false,
+        "isElite": false,
+        "isInfluencer": false,
+        "seller": {
+          "id": 1161564,
+          "name": "Sedefira"
+        },
+        "rate": 5,
+        "comment": "Çok güzel zaten kurulu geliyor",
+        "likesCount": 1,
+        "language": "tr",
+        "createdAt": 1773839326352,
+        "lastModifiedAt": 1773839339570,
+        "mediaFiles": [],
+        "trusted": true,
+        "culture": "tr-TR",
+        "sourceChannelId": 1
+      },
+      {
+        "id": 651797302,
+        "contentId": 1071760667,
+        "userFullName": "Kullanıcı G",
+        "showUserFullName": true,
+        "isElite": false,
+        "isInfluencer": false,
+        "seller": {
+          "id": 1161564,
+          "name": "Sedefira"
+        },
+        "rate": 5,
+        "comment": "kurulumu kolay, konforlu ve şık bir ürün",
+        "likesCount": 0,
+        "language": "tr",
+        "createdAt": 1784906963160,
+        "lastModifiedAt": 1784907015220,
+        "mediaFiles": [],
+        "trusted": true,
+        "culture": "tr-TR",
+        "sourceChannelId": 1
+      },
+      {
+        "id": 619650878,
+        "contentId": 1071760667,
+        "userFullName": "Kullanıcı H",
+        "showUserFullName": false,
+        "isElite": false,
+        "isInfluencer": false,
+        "seller": {
+          "id": 1161564,
+          "name": "Sedefira"
+        },
+        "rate": 5,
+        "comment": "Çok güzel ve kaliteli hıc bır sorun yaşamadan kısa sürede elıme ulaştı",
+        "likesCount": 0,
+        "language": "tr",
+        "createdAt": 1773178429994,
+        "lastModifiedAt": 1773178429994,
+        "mediaFiles": [],
+        "trusted": true,
+        "culture": "tr-TR",
+        "sourceChannelId": 1
+      },
+      {
+        "id": 610967629,
+        "contentId": 1071760667,
+        "userFullName": "Kullanıcı I",
+        "showUserFullName": true,
+        "isElite": false,
+        "isInfluencer": false,
+        "seller": {
+          "id": 1161564,
+          "name": "Sedefira"
+        },
+        "rate": 5,
+        "comment": "Aşırı güzel ürün, 1 tane daha alacağım",
+        "likesCount": 1,
+        "language": "tr",
+        "createdAt": 1770489949733,
+        "lastModifiedAt": 1770489949733,
+        "mediaFiles": [],
+        "trusted": true,
+        "culture": "tr-TR",
+        "sourceChannelId": 1
+      },
+      {
+        "id": 626862851,
+        "contentId": 1071760667,
+        "userFullName": "Kullanıcı J",
+        "showUserFullName": false,
+        "isElite": false,
+        "isInfluencer": false,
+        "seller": {
+          "id": 1161564,
+          "name": "Sedefira"
+        },
+        "rate": 5,
+        "comment": "Çok iyi oldu,kurulumu aşırı basit çok beğendim. Instagram: [gizlendi]",
+        "likesCount": 2,
+        "language": "tr",
+        "createdAt": 1775315988774,
+        "lastModifiedAt": 1775316054442,
+        "mediaFiles": [
+          {
+            "id": 136316084,
+            "url": "https://cdn.dsmcdn.com/mnresize/-/820/prod-product-review-media_1768435207133/img/2019922/2023910/2023910/1071760667/9601719-1775316053667.jpeg",
+            "thumbnailUrl": "https://cdn.dsmcdn.com/mnresize/300/300/prod-product-review-media_1768435207133/img/2019922/2023910/2023910/1071760667/9601719-1775316053667.jpeg",
+            "mediaType": "IMAGE",
+            "height": 3024,
+            "weight": 4032
+          }
+        ],
+        "trusted": true,
+        "culture": "tr-TR",
+        "sourceChannelId": 1
+      },
+      {
+        "id": 604386374,
+        "contentId": 1071760667,
+        "userFullName": "Kullanıcı K",
+        "showUserFullName": false,
+        "isElite": false,
+        "isInfluencer": false,
+        "seller": {
+          "id": 1161564,
+          "name": "Sedefira"
+        },
+        "rate": 5,
+        "comment": "İşini iyi yapan böyle insanlara ihtiyacımız var.ürün hem çok iyi paketlenmiş halde,hem çok hızlı, hem de çok kaliteli geldi.Çok teşekkür ediyorum. Pakette vidası dübeli var ama ben duvara sabitlemeden kullandım,zaten böyle de sabit duruyor.",
+        "likesCount": 1,
+        "language": "tr",
+        "createdAt": 1768409893753,
+        "lastModifiedAt": 1768409893753,
+        "mediaFiles": [
+          {
+            "id": 131928810,
+            "url": "https://cdn.dsmcdn.com/mnresize/-/820/prod-product-review-media_1762732810909/img/2019922/2020919/2033880/1071760667/18599533-1768409890650.jpeg",
+            "thumbnailUrl": "https://cdn.dsmcdn.com/mnresize/300/300/prod-product-review-media_1762732810909/img/2019922/2020919/2033880/1071760667/18599533-1768409890650.jpeg",
+            "mediaType": "IMAGE",
+            "height": 4284,
+            "weight": 5712
+          },
+          {
+            "id": 131928809,
+            "url": "https://cdn.dsmcdn.com/mnresize/-/820/prod-product-review-media_1762732810909/img/2019922/2020919/2033880/1071760667/18599533-1768409889334.jpeg",
+            "thumbnailUrl": "https://cdn.dsmcdn.com/mnresize/300/300/prod-product-review-media_1762732810909/img/2019922/2020919/2033880/1071760667/18599533-1768409889334.jpeg",
+            "mediaType": "IMAGE",
+            "height": 4284,
+            "weight": 5712
+          },
+          {
+            "id": 131928811,
+            "url": "https://cdn.dsmcdn.com/mnresize/-/820/prod-product-review-media_1762732810909/img/2019922/2020919/2033880/1071760667/18599533-1768409892302.jpeg",
+            "thumbnailUrl": "https://cdn.dsmcdn.com/mnresize/300/300/prod-product-review-media_1762732810909/img/2019922/2020919/2033880/1071760667/18599533-1768409892302.jpeg",
+            "mediaType": "IMAGE",
+            "height": 4284,
+            "weight": 5712
+          }
+        ],
+        "trusted": true,
+        "culture": "tr-TR",
+        "sourceChannelId": 1
+      },
+      {
+        "id": 632134536,
+        "contentId": 1071760667,
+        "userFullName": "Kullanıcı L",
+        "showUserFullName": false,
+        "isElite": false,
+        "isInfluencer": false,
+        "seller": {
+          "id": 1161564,
+          "name": "Sedefira"
+        },
+        "rate": 5,
+        "comment": "muntazam bir ürün, çok begendim, iki tane aldım. kurulumu basit, odanin tüm havası degisti. tavsiye ederim.",
+        "likesCount": 1,
+        "language": "tr",
+        "createdAt": 1777092906657,
+        "lastModifiedAt": 1781206836276,
+        "mediaFiles": [],
+        "trusted": true,
+        "culture": "tr-TR",
+        "sourceChannelId": 1
+      },
+      {
+        "id": 599417632,
+        "contentId": 1071760667,
+        "userFullName": "Kullanıcı M",
+        "showUserFullName": false,
+        "isElite": false,
+        "isInfluencer": false,
+        "seller": {
+          "id": 1161564,
+          "name": "Sedefira"
+        },
+        "rate": 5,
+        "comment": "az önce geldi ve hemen kurdum. çok güzel tavsiye ederim",
+        "likesCount": 4,
+        "language": "tr",
+        "createdAt": 1766755760868,
+        "lastModifiedAt": 1766755760868,
+        "mediaFiles": [
+          {
+            "id": 130574051,
+            "url": "https://cdn.dsmcdn.com/mnresize/-/820/prod-product-review-media_1762732810909/img/2018925/2030889/2044847/1071760667/6509138-1766755759751.jpeg",
+            "thumbnailUrl": "https://cdn.dsmcdn.com/mnresize/300/300/prod-product-review-media_1762732810909/img/2018925/2030889/2044847/1071760667/6509138-1766755759751.jpeg",
+            "mediaType": "IMAGE",
+            "height": 3840,
+            "weight": 2160
+          }
+        ],
+        "trusted": true,
+        "culture": "tr-TR",
+        "sourceChannelId": 1
+      },
+      {
+        "id": 639215986,
+        "contentId": 1071760667,
+        "userFullName": "Kullanıcı N",
+        "showUserFullName": false,
+        "isElite": false,
+        "isInfluencer": false,
+        "seller": {
+          "id": 1161564,
+          "name": "Sedefira"
+        },
+        "rate": 5,
+        "comment": "Görüntüsü çok güzel ve kaliteli",
+        "likesCount": 1,
+        "language": "tr",
+        "createdAt": 1779559801008,
+        "lastModifiedAt": 1779559801008,
+        "mediaFiles": [
+          {
+            "id": 138536495,
+            "url": "https://cdn.dsmcdn.com/mnresize/-/820/prod-product-review-media_1777680012294/img/2019922/2024907/2042853/1071760667/223029100-1779559800114.jpeg",
+            "thumbnailUrl": "https://cdn.dsmcdn.com/mnresize/300/300/prod-product-review-media_1777680012294/img/2019922/2024907/2042853/1071760667/223029100-1779559800114.jpeg",
+            "mediaType": "IMAGE",
+            "height": 3024,
+            "weight": 4032
+          }
+        ],
+        "trusted": true,
+        "culture": "tr-TR",
+        "sourceChannelId": 1
+      },
+      {
+        "id": 631294338,
+        "contentId": 1071760667,
+        "userFullName": "Kullanıcı O",
+        "showUserFullName": false,
+        "isElite": false,
+        "isInfluencer": false,
+        "seller": {
+          "id": 1161564,
+          "name": "Sedefira"
+        },
+        "rate": 5,
+        "comment": "ürün çok iyi .   ben petek kapatmak için almadım. dresuar olarak kullandım.  iyi ki almışım. muhtelen bir kaç tane daha alırım.",
+        "likesCount": 0,
+        "language": "tr",
+        "createdAt": 1776791812472,
+        "lastModifiedAt": 1776791812472,
+        "mediaFiles": [
+          {
+            "id": 137082239,
+            "url": "https://cdn.dsmcdn.com/mnresize/-/820/prod-product-review-media_1768435207133/img/2019922/2023910/2040859/1071760667/60787176-1776791809829.jpeg",
+            "thumbnailUrl": "https://cdn.dsmcdn.com/mnresize/300/300/prod-product-review-media_1768435207133/img/2019922/2023910/2040859/1071760667/60787176-1776791809829.jpeg",
+            "mediaType": "IMAGE",
+            "height": 9248,
+            "weight": 6936
+          },
+          {
+            "id": 137082238,
+            "url": "https://cdn.dsmcdn.com/mnresize/-/820/prod-product-review-media_1768435207133/img/2019922/2023910/2040859/1071760667/60787176-1776791807341.jpeg",
+            "thumbnailUrl": "https://cdn.dsmcdn.com/mnresize/300/300/prod-product-review-media_1768435207133/img/2019922/2023910/2040859/1071760667/60787176-1776791807341.jpeg",
+            "mediaType": "IMAGE",
+            "height": 9248,
+            "weight": 6936
+          },
+          {
+            "id": 137082237,
+            "url": "https://cdn.dsmcdn.com/mnresize/-/820/prod-product-review-media_1768435207133/img/2019922/2023910/2040859/1071760667/60787176-1776791805129.jpeg",
+            "thumbnailUrl": "https://cdn.dsmcdn.com/mnresize/300/300/prod-product-review-media_1768435207133/img/2019922/2023910/2040859/1071760667/60787176-1776791805129.jpeg",
+            "mediaType": "IMAGE",
+            "height": 9248,
+            "weight": 6936
+          }
+        ],
+        "trusted": true,
+        "culture": "tr-TR",
+        "sourceChannelId": 1
+      },
+      {
+        "id": 617591641,
+        "contentId": 1071760667,
+        "userFullName": "Kullanıcı P",
+        "showUserFullName": false,
+        "isElite": false,
+        "isInfluencer": false,
+        "seller": {
+          "id": 1161564,
+          "name": "Sedefira"
+        },
+        "rate": 5,
+        "comment": "çok şık. çok beğendim",
+        "likesCount": 1,
+        "language": "tr",
+        "createdAt": 1772643988331,
+        "lastModifiedAt": 1772643988331,
+        "mediaFiles": [
+          {
+            "id": 134751895,
+            "url": "https://cdn.dsmcdn.com/mnresize/-/820/prod-product-review-media_1768435207133/img/2019922/2022913/2023910/1071760667/13361077-1772643987248.jpeg",
+            "thumbnailUrl": "https://cdn.dsmcdn.com/mnresize/300/300/prod-product-review-media_1768435207133/img/2019922/2022913/2023910/1071760667/13361077-1772643987248.jpeg",
+            "mediaType": "IMAGE",
+            "height": 4000,
+            "weight": 3000
+          }
+        ],
+        "trusted": true,
+        "culture": "tr-TR",
+        "sourceChannelId": 1
+      },
+      {
+        "id": 610605697,
+        "contentId": 1071760667,
+        "userFullName": "Kullanıcı Q",
+        "showUserFullName": false,
+        "isElite": false,
+        "isInfluencer": false,
+        "seller": {
+          "id": 1161564,
+          "name": "Sedefira"
+        },
+        "rate": 5,
+        "comment": "Mükemmel kalite 🥳",
+        "likesCount": 1,
+        "language": "tr",
+        "createdAt": 1770372818131,
+        "lastModifiedAt": 1770372818131,
+        "mediaFiles": [],
+        "trusted": true,
+        "culture": "tr-TR",
+        "sourceChannelId": 1
+      },
+      {
+        "id": 621541436,
+        "contentId": 1071760667,
+        "userFullName": "Kullanıcı R",
+        "showUserFullName": false,
+        "isElite": false,
+        "isInfluencer": false,
+        "seller": {
+          "id": 1161564,
+          "name": "Sedefira"
+        },
+        "rate": 5,
+        "comment": "Çok güzel ve kaliteli..",
+        "likesCount": 1,
+        "language": "tr",
+        "createdAt": 1773683167336,
+        "lastModifiedAt": 1773683167336,
+        "mediaFiles": [
+          {
+            "id": 135423732,
+            "url": "https://cdn.dsmcdn.com/mnresize/-/820/prod-product-review-media_1768435207133/img/2019922/2022913/2035874/1071760667/13259653-1773683165941.jpeg",
+            "thumbnailUrl": "https://cdn.dsmcdn.com/mnresize/300/300/prod-product-review-media_1768435207133/img/2019922/2022913/2035874/1071760667/13259653-1773683165941.jpeg",
+            "mediaType": "IMAGE",
+            "height": 4284,
+            "weight": 5712
+          }
+        ],
+        "trusted": true,
+        "culture": "tr-TR",
+        "sourceChannelId": 1
+      },
+      {
+        "id": 629544717,
+        "contentId": 1071760667,
+        "userFullName": "Kullanıcı S",
+        "showUserFullName": false,
+        "isElite": false,
+        "isInfluencer": false,
+        "seller": {
+          "id": 1161564,
+          "name": "Sedefira"
+        },
+        "rate": 5,
+        "comment": "Biz bayıldık 😍✨🤎",
+        "likesCount": 0,
+        "language": "tr",
+        "createdAt": 1776194068530,
+        "lastModifiedAt": 1776194068530,
+        "mediaFiles": [
+          {
+            "id": 136771826,
+            "url": "https://cdn.dsmcdn.com/mnresize/-/820/prod-product-review-media_1768435207133/img/2019922/2023910/2033880/1071760667/27350045-1776194065833.jpeg",
+            "thumbnailUrl": "https://cdn.dsmcdn.com/mnresize/300/300/prod-product-review-media_1768435207133/img/2019922/2023910/2033880/1071760667/27350045-1776194065833.jpeg",
+            "mediaType": "IMAGE",
+            "height": 5712,
+            "weight": 3213
+          },
+          {
+            "id": 136771827,
+            "url": "https://cdn.dsmcdn.com/mnresize/-/820/prod-product-review-media_1768435207133/img/2019922/2023910/2033880/1071760667/27350045-1776194067161.jpeg",
+            "thumbnailUrl": "https://cdn.dsmcdn.com/mnresize/300/300/prod-product-review-media_1768435207133/img/2019922/2023910/2033880/1071760667/27350045-1776194067161.jpeg",
+            "mediaType": "IMAGE",
+            "height": 5712,
+            "weight": 3213
+          }
+        ],
+        "trusted": true,
+        "culture": "tr-TR",
+        "sourceChannelId": 1
+      },
+      {
+        "id": 648783468,
+        "contentId": 1071760667,
+        "userFullName": "Kullanıcı T",
+        "showUserFullName": false,
+        "isElite": false,
+        "isInfluencer": false,
+        "seller": {
+          "id": 1161564,
+          "name": "Sedefira"
+        },
+        "rate": 5,
+        "comment": "guzel urun, guzel paketleme. Surat Kargo paketi eve kadar getirmiyor apartman girisinden teslim ediyor !",
+        "likesCount": 0,
+        "language": "tr",
+        "createdAt": 1783692173782,
+        "lastModifiedAt": 1783692173782,
+        "mediaFiles": [],
+        "trusted": true,
+        "culture": "tr-TR",
+        "sourceChannelId": 1
+      }
+    ]
+  }
+}
