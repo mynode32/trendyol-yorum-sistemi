@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSessionToken } from "@/lib/auth/session";
+import { createSessionToken, MAX_SESSION_AGE_MS } from "@/lib/auth/session";
 
 export async function POST(request: Request) {
   const { password } = await request.json();
@@ -15,9 +15,10 @@ export async function POST(request: Request) {
   const response = NextResponse.json({ ok: true });
   response.cookies.set("ty_admin_session", token, {
     httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
     path: "/",
-    maxAge: 60 * 60 * 24,
+    maxAge: MAX_SESSION_AGE_MS / 1000,
   });
   return response;
 }

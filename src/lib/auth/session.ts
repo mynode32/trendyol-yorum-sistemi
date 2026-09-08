@@ -1,5 +1,8 @@
 import { createHmac, timingSafeEqual } from "crypto";
 
+/** Oturum ömrü — login route'undaki cookie maxAge'i bu değerden türetilir. */
+export const MAX_SESSION_AGE_MS = 24 * 60 * 60 * 1000;
+
 function getSecret(): string {
   const secret = process.env.SESSION_SECRET;
   if (!secret) throw new Error("SESSION_SECRET tanımlı değil");
@@ -25,7 +28,16 @@ export function verifySessionToken(token: string): boolean {
     const actualBuf = Buffer.from(signature, "hex");
 
     if (expectedBuf.length !== actualBuf.length) return false;
-    return timingSafeEqual(expectedBuf, actualBuf);
+    if (!timingSafeEqual(expectedBuf, actualBuf)) return false;
+
+    // İmza doğru olsa bile süresi dolmuş token kabul edilmez — aksi halde ele
+    // geçirilen bir token süresiz geçerli kalır.
+    const [prefix, issuedAtRaw] = payload.split(":");
+    if (prefix !== "admin") return false;
+    const issuedAt = Number(issuedAtRaw);
+    if (!Number.isFinite(issuedAt)) return false;
+
+    return Date.now() - issuedAt <= MAX_SESSION_AGE_MS;
   } catch {
     return false;
   }

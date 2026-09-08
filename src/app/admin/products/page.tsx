@@ -37,9 +37,15 @@ export default function ProductsPage() {
     load();
   }
 
+  async function logout() {
+    await fetch("/api/admin/logout", { method: "POST" });
+    window.location.href = "/admin/login";
+  }
+
   return (
     <div>
       <h1>Ürün Yönetimi</h1>
+      <button onClick={logout}>Çıkış Yap</button>
       <form onSubmit={addProduct}>
         <input
           value={newUrl}
