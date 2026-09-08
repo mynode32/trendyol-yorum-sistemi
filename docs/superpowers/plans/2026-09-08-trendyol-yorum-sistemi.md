@@ -1857,7 +1857,10 @@ import { verifySessionToken } from "@/lib/auth/session";
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith("/admin/login")) {
+  // /api/admin/login İSTİSNASI ZORUNLU (Task 13 fix round sırasında bulundu) —
+  // matcher'a /api/admin/:path* eklenince bu istisna olmadan login endpoint'inin
+  // kendisi de korumaya takılır ve kimse giriş yapamaz hale gelir (kilitlenme).
+  if (pathname.startsWith("/admin/login") || pathname.startsWith("/api/admin/login")) {
     return NextResponse.next();
   }
 
