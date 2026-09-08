@@ -54,6 +54,8 @@ npm install zod
 
 - [ ] **Step 3: `vitest.config.ts` oluştur**
 
+**Revize (Task 10 sırasında eklendi):** `fileParallelism: false` zorunlu — bu projedeki entegrasyon testlerinin çoğu aynı canlı yerel Postgres'e karşı çalışır (mock DB yok); Vitest'in varsayılan paralel dosya çalıştırması, farklı test dosyalarının `beforeEach`'lerinin (`product.deleteMany()` vb.) birbiriyle yarışmasına ve aralıklı `Foreign key constraint violated` hatalarına yol açıyor (bkz. ledger Ruling 11).
+
 ```typescript
 import { defineConfig } from "vitest/config";
 import tsconfigPaths from "vite-tsconfig-paths";
@@ -63,6 +65,7 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],
+    fileParallelism: false,
   },
 });
 ```
