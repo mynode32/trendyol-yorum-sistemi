@@ -1193,6 +1193,10 @@ function makeRequest(url: string) {
 
 describe("GET /api/v1/products/:id/reviews", () => {
   beforeEach(async () => {
+    // ScrapeLog önce silinmeli — Product/Review FK'si üzerinden referans veriyor
+    // (bkz. Task 6'nın kendi testi ve Task 9 fix round 1 — paylaşımlı dev DB'de
+    // gerçek scrape verisi kalmışsa product.deleteMany() FK ihlaliyle patlar).
+    await prisma.scrapeLog.deleteMany();
     await prisma.review.deleteMany();
     await prisma.product.deleteMany();
   });
@@ -1327,6 +1331,8 @@ import { GET } from "./route";
 
 describe("GET /api/v1/products/:id/summary", () => {
   beforeEach(async () => {
+    // ScrapeLog önce silinmeli — bkz. Task 9 fix round 1 notu.
+    await prisma.scrapeLog.deleteMany();
     await prisma.review.deleteMany();
     await prisma.product.deleteMany();
   });
@@ -1845,6 +1851,9 @@ import { GET, POST } from "./route";
 
 describe("/api/admin/products", () => {
   beforeEach(async () => {
+    // ScrapeLog/Review önce silinmeli — bkz. Task 9 fix round 1 notu.
+    await prisma.scrapeLog.deleteMany();
+    await prisma.review.deleteMany();
     await prisma.product.deleteMany();
   });
 
@@ -2074,6 +2083,8 @@ import { PATCH } from "./[id]/route";
 
 describe("PATCH /api/admin/reviews/:id", () => {
   beforeEach(async () => {
+    // ScrapeLog önce silinmeli — bkz. Task 9 fix round 1 notu.
+    await prisma.scrapeLog.deleteMany();
     await prisma.review.deleteMany();
     await prisma.product.deleteMany();
   });
