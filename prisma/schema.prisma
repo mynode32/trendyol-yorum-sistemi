@@ -1,0 +1,51 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id                String      @id @default(cuid())
+  trendyolProductId String      @unique
+  trendyolUrl       String
+  name              String
+  isTracked         Boolean     @default(true)
+  lastScrapedAt     DateTime?
+  createdAt         DateTime    @default(now())
+  reviews           Review[]
+  scrapeLogs        ScrapeLog[]
+}
+
+model Review {
+  id               String   @id @default(cuid())
+  productId        String
+  product          Product  @relation(fields: [productId], references: [id])
+  trendyolReviewId String   @unique
+  rating           Int
+  comment          String
+  authorName       String
+  hasPhoto         Boolean  @default(false)
+  photoUrls        String[] @default([])
+  reviewDate       DateTime
+  helpfulCount     Int      @default(0)
+  isApproved       Boolean  @default(true)
+  isHidden         Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  @@index([productId, rating])
+  @@index([productId, reviewDate])
+}
+
+model ScrapeLog {
+  id           String    @id @default(cuid())
+  productId    String
+  product      Product   @relation(fields: [productId], references: [id])
+  startedAt    DateTime  @default(now())
+  finishedAt   DateTime?
+  status       String
+  newReviews   Int       @default(0)
+  errorMessage String?
+}
