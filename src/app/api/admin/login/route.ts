@@ -1,9 +1,20 @@
 import { NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
+import { z } from "zod";
 import { createSessionToken, MAX_SESSION_AGE_MS } from "@/lib/auth/session";
 import { isRateLimited, registerFailedLoginAttempt, clearLoginAttempts } from "@/lib/auth/rateLimit";
 
 function clientKey(request: Request): string {
   return request.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+}
+
+const loginBodySchema = z.object({ password: z.string().min(1).max(1024) });
+
+function secureEqual(left: string, right: string | undefined): boolean {
+  if (!right) return false;
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
 }
 
 export async function POST(request: Request) {
@@ -16,9 +27,24 @@ export async function POST(request: Request) {
     );
   }
 
-  const { password } = await request.json();
+  let rawBody: unknown;
+  try {
+    rawBody = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: { code: "INVALID_BODY", message: "Geçerli bir JSON gövdesi gönderin" } },
+      { status: 400 }
+    );
+  }
+  const parsed = loginBodySchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: { code: "INVALID_BODY", message: "Şifre alanı geçerli olmalı" } },
+      { status: 400 }
+    );
+  }
 
-  if (password !== process.env.ADMIN_PASSWORD) {
+  if (!secureEqual(parsed.data.password, process.env.ADMIN_PASSWORD)) {
     registerFailedLoginAttempt(key);
     return NextResponse.json(
       { error: { code: "INVALID_CREDENTIALS", message: "Şifre hatalı" } },

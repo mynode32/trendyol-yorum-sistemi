@@ -40,6 +40,9 @@ export default function ScrapeLogsPage() {
           <p className="page-header__subtitle">Son 100 tarama çalıştırması.</p>
         </div>
       </div>
+      <p className="page-header__subtitle" style={{ marginBottom: 20 }}>
+        Otomatik izleme için <code>/api/admin/health</code> endpoint&apos;i son tarama ve veri güncelliği durumunu verir.
+      </p>
 
       {error ? (
         <p className="alert alert-error">Tarama kayıtları yüklenemedi. Sayfayı yenilemeyi deneyin.</p>

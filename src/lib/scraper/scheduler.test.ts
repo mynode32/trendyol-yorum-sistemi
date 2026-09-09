@@ -27,10 +27,11 @@ describe("runScheduledScrape", () => {
       .spyOn(persist, "scrapeProduct")
       .mockResolvedValue({ status: "success", newReviews: 0 });
 
-    await runScheduledScrape();
+    const summary = await runScheduledScrape();
 
     expect(scrapeProductSpy).toHaveBeenCalledTimes(1);
     expect(scrapeProductSpy).toHaveBeenCalledWith(tracked.id);
+    expect(summary).toMatchObject({ attempted: 1, succeeded: 1, failed: 0 });
   });
 
   it("continues to the next product when one scrape fails", async () => {
@@ -48,9 +49,10 @@ describe("runScheduledScrape", () => {
         return { status: "success", newReviews: 0 };
       });
 
-    await runScheduledScrape();
+    const summary = await runScheduledScrape();
 
     expect(scrapeProductSpy).toHaveBeenCalledTimes(2);
     expect(scrapeProductSpy).toHaveBeenCalledWith(p2.id);
+    expect(summary).toMatchObject({ attempted: 2, succeeded: 1, failed: 1 });
   }, 10000);
 });

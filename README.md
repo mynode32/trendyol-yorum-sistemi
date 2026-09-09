@@ -21,6 +21,7 @@ Tasarım ve plan dokümanları:
 | `DIRECT_URL` | Migration'lar için doğrudan (havuzsuz) bağlantı adresi. Yerelde `DATABASE_URL` ile aynı olabilir; Supabase'de port 5432 olan bağlantı adresi kullanılır. |
 | `ADMIN_PASSWORD` | Admin paneline giriş şifresi (tek kullanıcı) |
 | `SESSION_SECRET` | Oturum cookie'sini imzalayan HMAC anahtarı; en az 32 karakterlik rastgele bir dize kullanın |
+| `SCRAPE_ALERT_WEBHOOK_URL` | Opsiyonel: başarısız scheduled scrape özetini JSON POST olarak alan alarm webhook'u |
 
 Oturumlar 24 saat sonra sunucu tarafında geçersiz olur (`MAX_SESSION_AGE_MS`).
 `SESSION_SECRET` değiştirilirse mevcut tüm oturumlar anında geçersiz olur.
@@ -51,6 +52,9 @@ npx prisma migrate deploy           # production'da 'migrate dev' KULLANMAYIN
 npm run build                       # widget bundle + next build
 npm run start
 ```
+
+Production worker, hata alarmı, yedekleme ve veri saklama kontrol listesi için
+[`docs/production-runbook.md`](docs/production-runbook.md) belgesini uygulayın.
 
 `npm run build`, `next build`'den önce `npm run build:widget` çalıştırır; bu adım
 `src/widget/widget.ts` dosyasını esbuild ile `public/widget/widget.js` bundle'ına
@@ -138,7 +142,7 @@ gösterir. `public/widget-demo.html` yerel deneme sayfasıdır
 `/admin/products` (giriş: `/admin/login`, `ADMIN_PASSWORD` ile).
 
 - **Ürün Yönetimi:** Trendyol ürün URL'si yapıştırarak ürün ekleme (ID URL'deki
-  `-p-<rakamlar>` deseninden çıkarılır), takibi durdurma/başlatma, "Çıkış Yap".
+  `-p-<rakamlar>` deseninden çıkarılır), tek ürün için **Şimdi Tara**, takibi durdurma/başlatma, "Çıkış Yap".
 - **Yorum Moderasyonu:** `/admin/products/<id>/reviews` — yorumları gizle/göster.
 - **Scraper İzleme:** `/admin/scrape-logs` — son çalıştırmalar, durum ve hata mesajları.
 

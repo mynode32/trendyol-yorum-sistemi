@@ -48,6 +48,9 @@ describe("parseReviewQuery", () => {
     ["stars=9,0"],
     ["stars=abc"],
     ["sort=random"],
+    ["hasPhoto=yes"],
+    ["dateFrom=2026-02-01&dateTo=2026-01-01"],
+    [`q=${"a".repeat(201)}`],
   ])("throws InvalidQueryError for %s", (queryString) => {
     expect(() => parseReviewQuery(new URLSearchParams(queryString))).toThrow(InvalidQueryError);
   });

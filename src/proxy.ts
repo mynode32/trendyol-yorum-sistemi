@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySessionToken } from "@/lib/auth/session";
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (pathname === "/admin/login" || pathname === "/api/admin/login") {
@@ -26,5 +26,4 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: ["/admin/:path*", "/api/admin/:path*"],
-  runtime: "nodejs",
 };

@@ -22,18 +22,21 @@ export default function ProductReviewsModerationPage() {
   const [loading, setLoading] = useState(true);
 
   async function load() {
-    setLoading(true);
-    const res = await adminFetch(
-      `/api/admin/products/${params.id}/reviews?page=${page}&pageSize=${PAGE_SIZE}`
-    );
-    const body = await res.json();
-    setReviews(body.data);
-    setTotal(body.pagination.total);
-    setLoading(false);
+    try {
+      const res = await adminFetch(
+        `/api/admin/products/${params.id}/reviews?page=${page}&pageSize=${PAGE_SIZE}`
+      );
+      if (!res.ok) throw new Error("Yorumlar yüklenemedi");
+      const body = await res.json();
+      setReviews(body.data);
+      setTotal(body.pagination.total);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
-    load();
+    void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id, page]);
 
@@ -121,7 +124,10 @@ export default function ProductReviewsModerationPage() {
         <div className="pagination">
           <button
             className="btn btn-secondary btn-sm"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            onClick={() => {
+              setLoading(true);
+              setPage((p) => Math.max(1, p - 1));
+            }}
             disabled={page <= 1}
           >
             ‹ Önceki
@@ -131,7 +137,10 @@ export default function ProductReviewsModerationPage() {
           </span>
           <button
             className="btn btn-secondary btn-sm"
-            onClick={() => setPage((p) => p + 1)}
+            onClick={() => {
+              setLoading(true);
+              setPage((p) => p + 1);
+            }}
             disabled={page >= totalPages}
           >
             Sonraki ›

@@ -45,4 +45,11 @@ describe("POST /api/admin/login", () => {
     const response = await POST(loginRequest("wrong", "2.2.2.2"));
     expect(response.status).toBe(401);
   });
+
+  it("returns 400 for malformed or invalid request bodies", async () => {
+    const malformed = await POST(new Request("http://localhost/api/admin/login", { method: "POST", body: "{" }));
+    const emptyPassword = await POST(new Request("http://localhost/api/admin/login", { method: "POST", body: JSON.stringify({ password: "" }) }));
+    expect(malformed.status).toBe(400);
+    expect(emptyPassword.status).toBe(400);
+  });
 });

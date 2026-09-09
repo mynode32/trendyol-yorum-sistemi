@@ -28,6 +28,8 @@ const DEFAULT_PAGE_SIZE = 20;
 const positiveIntSchema = z.coerce.number().int().min(1);
 const starSchema = z.coerce.number().int().min(1).max(5);
 const sortSchema = z.enum(["newest", "oldest", "mostHelpful", "longest"]);
+const hasPhotoSchema = z.enum(["true", "false"]);
+const searchSchema = z.string().trim().max(200);
 const dateSchema = z
   .string()
   .refine((value) => !Number.isNaN(new Date(value).getTime()), "geçerli bir tarih değil");
@@ -76,18 +78,25 @@ export function parseReviewQuery(searchParams: URLSearchParams): ReviewQuery {
   const sort: ReviewSort =
     sortParam === null ? "newest" : validate("sort", sortParam, sortSchema) ?? "newest";
 
+  const hasPhotoParam = searchParams.get("hasPhoto");
+  const hasPhoto =
+    hasPhotoParam === null ? undefined : validate("hasPhoto", hasPhotoParam, hasPhotoSchema);
+  const qParam = searchParams.get("q");
+  const q = qParam === null ? undefined : validate("q", qParam, searchSchema);
+
+  if (dateFromValue && dateToValue && new Date(dateFromValue) > new Date(dateToValue)) {
+    issues.push("dateFrom, dateTo'dan sonra olamaz");
+  }
+
   if (issues.length > 0) {
     throw new InvalidQueryError(issues.join("; "));
   }
-
-  const hasPhotoParam = searchParams.get("hasPhoto");
-  const q = searchParams.get("q") ?? undefined;
 
   return {
     stars: stars && stars.length > 0 ? stars : undefined,
     dateFrom: dateFromValue ? new Date(dateFromValue) : undefined,
     dateTo: dateToValue ? new Date(dateToValue) : undefined,
-    hasPhoto: hasPhotoParam === "true" ? true : hasPhotoParam === "false" ? false : undefined,
+    hasPhoto: hasPhoto === "true" ? true : hasPhoto === "false" ? false : undefined,
     q: q || undefined,
     sort,
     page,

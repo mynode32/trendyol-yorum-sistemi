@@ -14,7 +14,7 @@ describe("scrapeProduct", () => {
     await prisma.$disconnect();
   });
 
-  it("inserts new reviews, dedups on trendyolReviewId, writes a success ScrapeLog", async () => {
+  it("inserts new reviews, refreshes changed source fields, and preserves moderation", async () => {
     const product = await prisma.product.create({
       data: { trendyolProductId: "p-1", trendyolUrl: "https://x", name: "Ürün 1" },
     });
@@ -42,11 +42,34 @@ describe("scrapeProduct", () => {
     // sort=longest DB seviyesinde sıralanabilsin diye yorum uzunluğu kalıcı olarak saklanır.
     expect(reviews[0].commentLength).toBe("Süper".length);
 
-    // İkinci çalıştırma aynı yorumu tekrar eklemez
+    // İkinci çalıştırma aynı yorumu tekrar eklemez; ama kaynaktaki değişen alanları
+    // günceller ve admin'in gizleme kararına dokunmaz.
+    await prisma.review.update({ where: { trendyolReviewId: "r-1" }, data: { isHidden: true } });
+    vi.spyOn(client, "fetchAllReviews").mockResolvedValueOnce([
+      {
+        trendyolReviewId: "r-1",
+        rating: 4,
+        comment: "Güncellenmiş yorum",
+        authorName: "B",
+        hasPhoto: true,
+        photoUrls: ["https://example.test/photo.jpg"],
+        reviewDate: new Date("2026-01-02"),
+        helpfulCount: 7,
+      },
+    ]);
     const secondResult = await scrapeProduct(product.id);
     expect(secondResult.newReviews).toBe(0);
     const reviewsAfterSecond = await prisma.review.findMany({ where: { productId: product.id } });
     expect(reviewsAfterSecond).toHaveLength(1);
+    expect(reviewsAfterSecond[0]).toMatchObject({
+      rating: 4,
+      comment: "Güncellenmiş yorum",
+      commentLength: "Güncellenmiş yorum".length,
+      authorName: "B",
+      hasPhoto: true,
+      helpfulCount: 7,
+      isHidden: true,
+    });
 
     const logs = await prisma.scrapeLog.findMany({ where: { productId: product.id } });
     expect(logs).toHaveLength(2);

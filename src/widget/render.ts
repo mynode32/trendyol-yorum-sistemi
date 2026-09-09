@@ -166,6 +166,7 @@ function renderReviewItems(reviews: ReviewItem[]): string {
 
 export async function renderReviewWidget(container: HTMLElement, options: WidgetOptions) {
   const { apiBaseUrl, productId } = options;
+  const encodedProductId = encodeURIComponent(productId);
   // Widget kendi stilini ve DOM'unu shadow DOM içinde izole eder ki host sitenin
   // CSS'i ile çakışmasın (bkz. design.md bölüm 7).
   const root = container.shadowRoot ?? container.attachShadow({ mode: "open" });
@@ -186,8 +187,8 @@ export async function renderReviewWidget(container: HTMLElement, options: Widget
   let initialReviews: ReviewsResponse;
   try {
     const [summaryRes, reviewsRes] = await Promise.all([
-      fetch(`${apiBaseUrl}/api/v1/products/${productId}/summary`),
-      fetch(`${apiBaseUrl}/api/v1/products/${productId}/reviews?${buildQueryString(state)}`),
+      fetch(`${apiBaseUrl}/api/v1/products/${encodedProductId}/summary`),
+      fetch(`${apiBaseUrl}/api/v1/products/${encodedProductId}/reviews?${buildQueryString(state)}`),
     ]);
     if (!summaryRes.ok || !reviewsRes.ok) {
       throw new Error("API'den başarısız yanıt");
@@ -217,7 +218,8 @@ export async function renderReviewWidget(container: HTMLElement, options: Widget
   async function loadReviews() {
     listEl.innerHTML = `<li>Yükleniyor...</li>`;
     try {
-      const res = await fetch(`${apiBaseUrl}/api/v1/products/${productId}/reviews?${buildQueryString(state)}`);
+      const res = await fetch(`${apiBaseUrl}/api/v1/products/${encodedProductId}/reviews?${buildQueryString(state)}`);
+      if (!res.ok) throw new Error("API'den başarısız yanıt");
       const body: ReviewsResponse = await res.json();
       listEl.innerHTML = renderReviewItems(body.data);
       applyPagination(body.pagination);

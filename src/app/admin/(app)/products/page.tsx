@@ -19,10 +19,10 @@ export default function ProductsPage() {
   const [newUrl, setNewUrl] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [actionProductId, setActionProductId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function load() {
-    setLoading(true);
     try {
       const res = await adminFetch("/api/admin/products");
       if (!res.ok) throw new Error();
@@ -36,7 +36,10 @@ export default function ProductsPage() {
   }
 
   useEffect(() => {
-    load();
+    // İlk veri yüklemesi ağ yanıtından sonra state'i günceller; kural bu async
+    // yardımcıyı doğrudan effect içinde çağırmayı yine de işaretler.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void load();
   }, []);
 
   async function addProduct(e: React.FormEvent) {
@@ -62,20 +65,51 @@ export default function ProductsPage() {
   }
 
   async function toggleTracked(product: Product) {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === product.id ? { ...p, isTracked: !p.isTracked } : p))
-    );
-    await adminFetch(`/api/admin/products/${product.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isTracked: !product.isTracked }),
-    });
+    setActionProductId(product.id);
+    setError(null);
+    try {
+      const res = await adminFetch(`/api/admin/products/${product.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isTracked: !product.isTracked }),
+      });
+      if (!res.ok) throw new Error();
+      await load();
+    } catch {
+      setError("Ürün takip durumu güncellenemedi.");
+    } finally {
+      setActionProductId(null);
+    }
   }
 
   async function deleteProduct(product: Product) {
     if (!window.confirm(`"${product.name}" silinsin mi? Bu işlem tüm yorumlarını da siler.`)) return;
-    setProducts((prev) => prev.filter((p) => p.id !== product.id));
-    await adminFetch(`/api/admin/products/${product.id}`, { method: "DELETE" });
+    setActionProductId(product.id);
+    setError(null);
+    try {
+      const res = await adminFetch(`/api/admin/products/${product.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      await load();
+    } catch {
+      setError("Ürün silinemedi.");
+    } finally {
+      setActionProductId(null);
+    }
+  }
+
+  async function scrapeNow(product: Product) {
+    setActionProductId(product.id);
+    setError(null);
+    try {
+      const res = await adminFetch(`/api/admin/products/${product.id}/scrape`, { method: "POST" });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(body?.error?.message ?? "Tarama başarısız oldu.");
+      await load();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Tarama başlatılamadı.");
+    } finally {
+      setActionProductId(null);
+    }
   }
 
   return (
@@ -159,10 +193,13 @@ export default function ProductsPage() {
                       <a href={`/admin/products/${p.id}/reviews`} className="btn btn-secondary btn-sm">
                         Yorumlar
                       </a>
-                      <button className="btn btn-secondary btn-sm" onClick={() => toggleTracked(p)}>
+                      <button className="btn btn-secondary btn-sm" onClick={() => scrapeNow(p)} disabled={actionProductId === p.id}>
+                        {actionProductId === p.id ? "Taranıyor…" : "Şimdi Tara"}
+                      </button>
+                      <button className="btn btn-secondary btn-sm" onClick={() => toggleTracked(p)} disabled={actionProductId === p.id}>
                         {p.isTracked ? "Durdur" : "Başlat"}
                       </button>
-                      <button className="btn btn-danger btn-sm" onClick={() => deleteProduct(p)}>
+                      <button className="btn btn-danger btn-sm" onClick={() => deleteProduct(p)} disabled={actionProductId === p.id}>
                         Sil
                       </button>
                     </div>
