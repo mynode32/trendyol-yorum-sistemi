@@ -3,7 +3,14 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/api/errors";
 
-const patchBodySchema = z.object({ isTracked: z.boolean() });
+const patchBodySchema = z
+  .object({
+    isTracked: z.boolean().optional(),
+    minRating: z.number().int().min(1).max(5).nullable().optional(),
+  })
+  .refine((data) => data.isTracked !== undefined || data.minRating !== undefined, {
+    message: "isTracked veya minRating alanlarından en az biri gönderilmeli",
+  });
 
 export async function PATCH(
   request: Request,
@@ -20,14 +27,21 @@ export async function PATCH(
 
   const parsed = patchBodySchema.safeParse(rawBody);
   if (!parsed.success) {
-    return jsonError("INVALID_BODY", "isTracked alanı boolean olmalı", 400);
+    return jsonError(
+      "INVALID_BODY",
+      "isTracked boolean, minRating 1-5 arası bir tam sayı ya da null olmalı",
+      400
+    );
   }
-  const { isTracked } = parsed.data;
+  const { isTracked, minRating } = parsed.data;
 
   try {
     const product = await prisma.product.update({
       where: { id },
-      data: { isTracked },
+      data: {
+        ...(isTracked !== undefined ? { isTracked } : {}),
+        ...(minRating !== undefined ? { minRating } : {}),
+      },
     });
     return NextResponse.json(product);
   } catch {

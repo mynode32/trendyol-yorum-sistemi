@@ -79,6 +79,25 @@ describe("scrapeProduct", () => {
     expect(updatedProduct.lastScrapedAt).not.toBeNull();
   });
 
+  it("skips reviews below the product's minRating threshold", async () => {
+    const product = await prisma.product.create({
+      data: { trendyolProductId: "p-3", trendyolUrl: "https://x", name: "Ürün 3", minRating: 4 },
+    });
+
+    vi.spyOn(client, "fetchAllReviews").mockResolvedValue([
+      { trendyolReviewId: "r-a", rating: 5, comment: "Harika", authorName: "A", hasPhoto: false, photoUrls: [], reviewDate: new Date("2026-01-01"), helpfulCount: 0 },
+      { trendyolReviewId: "r-b", rating: 3, comment: "Orta", authorName: "B", hasPhoto: false, photoUrls: [], reviewDate: new Date("2026-01-01"), helpfulCount: 0 },
+      { trendyolReviewId: "r-c", rating: 4, comment: "İyi", authorName: "C", hasPhoto: false, photoUrls: [], reviewDate: new Date("2026-01-01"), helpfulCount: 0 },
+    ]);
+
+    const result = await scrapeProduct(product.id);
+
+    expect(result.status).toBe("success");
+    expect(result.newReviews).toBe(2);
+    const stored = await prisma.review.findMany({ where: { productId: product.id }, orderBy: { rating: "asc" } });
+    expect(stored.map((r) => r.rating)).toEqual([4, 5]);
+  });
+
   it("writes a failed ScrapeLog when fetchAllReviews throws, without stopping the process", async () => {
     const product = await prisma.product.create({
       data: { trendyolProductId: "p-2", trendyolUrl: "https://x", name: "Ürün 2" },

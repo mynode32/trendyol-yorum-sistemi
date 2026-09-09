@@ -42,6 +42,37 @@ describe("/api/admin/products", () => {
     expect(body.data).toHaveLength(1);
   });
 
+  it("accepts an optional minRating and stores it on the product", async () => {
+    const request = new Request("http://localhost/api/admin/products", {
+      method: "POST",
+      body: JSON.stringify({
+        trendyolUrl: "https://www.trendyol.com/marka/urun-adi-p-987654321",
+        minRating: 4,
+      }),
+    });
+
+    const response = await POST(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(body.minRating).toBe(4);
+  });
+
+  it("returns 400 INVALID_BODY for a minRating outside 1-5", async () => {
+    const request = new Request("http://localhost/api/admin/products", {
+      method: "POST",
+      body: JSON.stringify({
+        trendyolUrl: "https://www.trendyol.com/marka/urun-adi-p-987654321",
+        minRating: 6,
+      }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error.code).toBe("INVALID_BODY");
+  });
+
   it("returns 400 for a URL without a parseable product id", async () => {
     const request = new Request("http://localhost/api/admin/products", {
       method: "POST",
@@ -96,6 +127,28 @@ describe("/api/admin/products", () => {
     expect(response.status).toBe(400);
     const body = await response.json();
     expect(body.error.code).toBe("INVALID_URL");
+  });
+
+  it("updates a product's minRating, and can clear it back to null", async () => {
+    const product = await prisma.product.create({
+      data: { trendyolProductId: "p1", trendyolUrl: "https://x", name: "Ürün" },
+    });
+
+    const request = new Request(`http://localhost/api/admin/products/${product.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ minRating: 3 }),
+    });
+    const response = await PATCH(request, { params: Promise.resolve({ id: product.id }) });
+    expect(response.status).toBe(200);
+    expect((await response.json()).minRating).toBe(3);
+
+    const clearRequest = new Request(`http://localhost/api/admin/products/${product.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ minRating: null }),
+    });
+    const clearResponse = await PATCH(clearRequest, { params: Promise.resolve({ id: product.id }) });
+    expect(clearResponse.status).toBe(200);
+    expect((await clearResponse.json()).minRating).toBeNull();
   });
 
   it("returns 404 instead of 500 when patching an unknown product id", async () => {

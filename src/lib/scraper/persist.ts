@@ -50,7 +50,12 @@ export async function scrapeProduct(
   const startedAt = new Date();
 
   try {
-    const reviews = await fetchAllReviews(product.trendyolProductId);
+    const fetchedReviews = await fetchAllReviews(product.trendyolProductId);
+    // minRating ayarlanmışsa bu eşiğin altındaki yorumlar hiç depolanmaz.
+    const reviews =
+      product.minRating != null
+        ? fetchedReviews.filter((review) => review.rating >= product.minRating!)
+        : fetchedReviews;
     const reviewData: StoredReviewData[] = reviews.map((review) => ({
       productId: product.id,
       trendyolReviewId: review.trendyolReviewId,

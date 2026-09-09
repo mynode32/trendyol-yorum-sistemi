@@ -17,6 +17,10 @@ model Product {
   trendyolUrl       String
   name              String
   isTracked         Boolean     @default(true)
+  // Ayarlanırsa, scraper bu puanın altındaki yorumları hiç depolamaz (1-5).
+  // null = filtresiz, tüm puanlar çekilir. Geriye dönük mevcut yorumları etkilemez,
+  // yalnızca bundan sonraki taramalarda neyin depolanacağını belirler.
+  minRating         Int?
   lastScrapedAt     DateTime?
   createdAt         DateTime    @default(now())
   reviews           Review[]

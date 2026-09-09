@@ -2,7 +2,14 @@
 import { useEffect, useState } from "react";
 import { adminFetch } from "@/lib/adminFetch";
 
-type Product = { id: string; name: string; trendyolUrl: string; isTracked: boolean; lastScrapedAt: string | null };
+type Product = {
+  id: string;
+  name: string;
+  trendyolUrl: string;
+  isTracked: boolean;
+  lastScrapedAt: string | null;
+  minRating: number | null;
+};
 
 function formatDate(value: string | null): string {
   if (!value) return "Henüz taranmadı";
@@ -17,6 +24,7 @@ function formatDate(value: string | null): string {
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [newUrl, setNewUrl] = useState("");
+  const [newMinRating, setNewMinRating] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [actionProductId, setActionProductId] = useState<string | null>(null);
@@ -50,7 +58,10 @@ export default function ProductsPage() {
       const res = await adminFetch("/api/admin/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ trendyolUrl: newUrl }),
+        body: JSON.stringify({
+          trendyolUrl: newUrl,
+          ...(newMinRating ? { minRating: Number(newMinRating) } : {}),
+        }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
@@ -58,6 +69,7 @@ export default function ProductsPage() {
         return;
       }
       setNewUrl("");
+      setNewMinRating("");
       await load();
     } finally {
       setSubmitting(false);
@@ -77,6 +89,25 @@ export default function ProductsPage() {
       await load();
     } catch {
       setError("Ürün takip durumu güncellenemedi.");
+    } finally {
+      setActionProductId(null);
+    }
+  }
+
+  async function updateMinRating(product: Product, rawValue: string) {
+    const minRating = rawValue ? Number(rawValue) : null;
+    setActionProductId(product.id);
+    setError(null);
+    try {
+      const res = await adminFetch(`/api/admin/products/${product.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ minRating }),
+      });
+      if (!res.ok) throw new Error();
+      await load();
+    } catch {
+      setError("Minimum puan güncellenemedi.");
     } finally {
       setActionProductId(null);
     }
@@ -139,6 +170,20 @@ export default function ProductsPage() {
             required
           />
         </div>
+        <div className="field" style={{ flex: "0 1 180px" }}>
+          <label htmlFor="minRating">Minimum puan</label>
+          <select
+            id="minRating"
+            className="input"
+            value={newMinRating}
+            onChange={(e) => setNewMinRating(e.target.value)}
+          >
+            <option value="">Tüm puanlar</option>
+            <option value="3">3★ ve üzeri</option>
+            <option value="4">4★ ve üzeri</option>
+            <option value="5">Sadece 5★</option>
+          </select>
+        </div>
         <button type="submit" className="btn btn-primary" style={{ alignSelf: "flex-end" }} disabled={submitting}>
           {submitting ? "Ekleniyor…" : "Ekle"}
         </button>
@@ -164,6 +209,7 @@ export default function ProductsPage() {
               <tr>
                 <th>Ürün</th>
                 <th>Durum</th>
+                <th>Minimum puan</th>
                 <th>Son tarama</th>
                 <th aria-label="işlemler"></th>
               </tr>
@@ -186,6 +232,20 @@ export default function ProductsPage() {
                     <span className={`badge ${p.isTracked ? "badge-success" : "badge-neutral"}`}>
                       {p.isTracked ? "Takip ediliyor" : "Durduruldu"}
                     </span>
+                  </td>
+                  <td>
+                    <select
+                      className="input"
+                      style={{ height: 32, fontSize: 13, padding: "0 8px" }}
+                      value={p.minRating ?? ""}
+                      onChange={(e) => updateMinRating(p, e.target.value)}
+                      disabled={actionProductId === p.id}
+                    >
+                      <option value="">Tüm puanlar</option>
+                      <option value="3">3★ ve üzeri</option>
+                      <option value="4">4★ ve üzeri</option>
+                      <option value="5">Sadece 5★</option>
+                    </select>
                   </td>
                   <td style={{ color: "var(--text-muted)" }}>{formatDate(p.lastScrapedAt)}</td>
                   <td>
