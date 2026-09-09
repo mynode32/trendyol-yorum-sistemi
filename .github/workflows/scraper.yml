@@ -1,9 +1,15 @@
 name: Scheduled Scrape
 
+# NOT (2026-09-09): cron tetikleyicisi kasıtlı olarak KAPALI.
+# GitHub Actions runner'larının IP'leri Trendyol/Cloudflare tarafından bot
+# olarak işaretleniyor — Xvfb + headed Chromium doğru çalışıyor ama istek
+# HTTP 418 ile reddediliyor (aynı kod, aynı gece, kullanıcının kendi
+# makinesinden/residential IP'den 200 dönüyor). Yani sorun headed/headless
+# değil, runner'ın datacenter IP'si. Kalıcı çözüm: scraper'ı residential/ev
+# IP'sine sahip bir makineden (kullanıcının kendi bilgisayarı ya da normal
+# bir ev bağlantısı olan bir sunucu) çalıştırmak. Kanıtlanmadan cron'u
+# tekrar açmayın — aksi halde her 3 saatte bir sessizce başarısız olur.
 on:
-  schedule:
-    # Her 3 saatte bir (spec: 2-4 saat aralığı)
-    - cron: "0 */3 * * *"
   workflow_dispatch:
 
 jobs:

@@ -89,8 +89,12 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      <form onSubmit={addProduct} className="card" style={{ display: "flex", gap: 10, marginBottom: 28 }}>
-        <div className="field" style={{ flex: 1 }}>
+      <form
+        onSubmit={addProduct}
+        className="card"
+        style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 28 }}
+      >
+        <div className="field" style={{ flex: "1 1 240px" }}>
           <label htmlFor="trendyolUrl">Trendyol ürün URL&apos;si</label>
           <input
             id="trendyolUrl"
