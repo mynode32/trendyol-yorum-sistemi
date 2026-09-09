@@ -134,10 +134,19 @@ export default function ProductsPage() {
     try {
       const res = await adminFetch(`/api/admin/products/${product.id}/scrape`, { method: "POST" });
       const body = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(body?.error?.message ?? "Tarama başarısız oldu.");
+      if (!res.ok) {
+        throw new Error(
+          body?.error?.message ??
+            "Tarama başarısız oldu. Bu özellik yalnızca 7/24 çalışan tarama sunucusu (worker) aktifken çalışır — worker kurulana kadar bu hata beklenen bir durumdur."
+        );
+      }
       await load();
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Tarama başlatılamadı.");
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Tarama başlatılamadı. Bu özellik yalnızca 7/24 çalışan tarama sunucusu (worker) aktifken çalışır."
+      );
     } finally {
       setActionProductId(null);
     }
@@ -190,6 +199,21 @@ export default function ProductsPage() {
       </form>
 
       {error && <p className="alert alert-error" style={{ marginBottom: 20 }}>{error}</p>}
+
+      <p
+        style={{
+          fontSize: 13,
+          color: "var(--text-muted)",
+          background: "var(--surface-muted)",
+          border: "1px solid var(--border)",
+          borderRadius: "var(--radius-sm)",
+          padding: "10px 14px",
+          marginBottom: 20,
+        }}
+      >
+        Not: &quot;Şimdi Tara&quot; yalnızca 7/24 çalışan tarama sunucusu (worker) kurulup aktif olduğunda çalışır. Worker
+        kurulana kadar otomatik yorumlar periyodik zamanlanmış görevle çekilecektir.
+      </p>
 
       {loading ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
