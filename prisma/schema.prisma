@@ -3,8 +3,12 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Uygulama çalışma zamanı: Supabase'in pgbouncer bağlantı havuzu (port 6543).
+  url       = env("DATABASE_URL")
+  // Migration'lar (prisma migrate) pgbouncer'ın transaction modunda çalışmaz;
+  // bu yüzden migration'lar için havuzsuz doğrudan bağlantı (port 5432) kullanılır.
+  directUrl = env("DIRECT_URL")
 }
 
 model Product {
@@ -31,12 +35,14 @@ model Review {
   photoUrls        String[] @default([])
   reviewDate       DateTime
   helpfulCount     Int      @default(0)
+  commentLength    Int      @default(0)
   isApproved       Boolean  @default(true)
   isHidden         Boolean  @default(false)
   createdAt        DateTime @default(now())
 
   @@index([productId, rating])
   @@index([productId, reviewDate])
+  @@index([productId, commentLength])
 }
 
 model ScrapeLog {

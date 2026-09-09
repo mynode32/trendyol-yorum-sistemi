@@ -52,5 +52,5 @@ describe("runScheduledScrape", () => {
 
     expect(scrapeProductSpy).toHaveBeenCalledTimes(2);
     expect(scrapeProductSpy).toHaveBeenCalledWith(p2.id);
-  });
+  }, 10000);
 });

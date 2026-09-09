@@ -4,6 +4,7 @@ import {
   buildReviewWhere,
   buildReviewOrderBy,
   InvalidQueryError,
+  type ReviewSort,
 } from "./filters";
 
 describe("parseReviewQuery", () => {
@@ -97,8 +98,9 @@ describe("buildReviewOrderBy", () => {
     ["newest", { reviewDate: "desc" }],
     ["oldest", { reviewDate: "asc" }],
     ["mostHelpful", { helpfulCount: "desc" }],
+    ["longest", { commentLength: "desc" }],
   ])("maps sort=%s correctly", (sort, expected) => {
-    const orderBy = buildReviewOrderBy({ sort: sort as any, page: 1, pageSize: 20 });
+    const orderBy = buildReviewOrderBy({ sort: sort as ReviewSort, page: 1, pageSize: 20 });
     expect(orderBy).toEqual(expected);
   });
 });

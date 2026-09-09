@@ -16,6 +16,7 @@ export async function scrapeProduct(
         trendyolReviewId: review.trendyolReviewId,
         rating: review.rating,
         comment: review.comment,
+        commentLength: review.comment.length,
         authorName: review.authorName,
         hasPhoto: review.hasPhoto,
         photoUrls: review.photoUrls,

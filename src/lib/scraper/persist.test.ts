@@ -39,6 +39,8 @@ describe("scrapeProduct", () => {
 
     const reviews = await prisma.review.findMany({ where: { productId: product.id } });
     expect(reviews).toHaveLength(1);
+    // sort=longest DB seviyesinde sıralanabilsin diye yorum uzunluğu kalıcı olarak saklanır.
+    expect(reviews[0].commentLength).toBe("Süper".length);
 
     // İkinci çalıştırma aynı yorumu tekrar eklemez
     const secondResult = await scrapeProduct(product.id);

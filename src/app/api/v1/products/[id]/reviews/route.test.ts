@@ -62,6 +62,7 @@ describe("GET /api/v1/products/:id/reviews", () => {
         trendyolReviewId: s.id,
         rating: 5,
         comment: s.comment,
+        commentLength: s.comment.length,
         authorName: "A",
         reviewDate: new Date(2026, 0, i + 1),
       })),

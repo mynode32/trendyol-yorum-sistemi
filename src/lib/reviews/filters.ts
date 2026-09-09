@@ -136,7 +136,7 @@ export function buildReviewOrderBy(
     case "mostHelpful":
       return { helpfulCount: "desc" };
     case "longest":
-      return { comment: "desc" }; // uzunluk sıralaması API katmanında uygulanır, bkz. Task 9
+      return { commentLength: "desc" };
     case "newest":
     default:
       return { reviewDate: "desc" };

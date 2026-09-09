@@ -1,12 +1,17 @@
 type WidgetOptions = { apiBaseUrl: string; productId: string };
 
-type Summary = { averageRating: number; totalReviews: number };
+type Summary = {
+  averageRating: number;
+  totalReviews: number;
+  ratingCounts?: Record<string, number>;
+};
 type ReviewItem = {
   id: string;
   rating: number;
   comment: string;
   authorName: string;
   hasPhoto: boolean;
+  photoUrls?: string[];
   reviewDate: string;
 };
 type ReviewsResponse = {
@@ -37,13 +42,21 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
-function injectStylesOnce() {
-  if (document.getElementById(STYLE_TAG_ID)) return;
+function injectStylesOnce(root: ShadowRoot) {
+  if (root.querySelector(`#${STYLE_TAG_ID}`)) return;
   const style = document.createElement("style");
   style.id = STYLE_TAG_ID;
   style.textContent = `
     .ty-widget { font-family: system-ui, sans-serif; max-width: 640px; color: #1a1a1a; }
     .ty-widget__summary { font-size: 18px; font-weight: 600; margin-bottom: 12px; }
+    .ty-widget__rating-distribution { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+    .ty-widget__rating-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #444; }
+    .ty-widget__rating-row-label { width: 24px; }
+    .ty-widget__rating-row-track { flex: 1; height: 6px; background: #eee; border-radius: 3px; overflow: hidden; }
+    .ty-widget__rating-row-fill { display: block; height: 100%; background: #ff9500; }
+    .ty-widget__rating-row-count { width: 24px; text-align: right; }
+    .ty-widget__item-photos { display: flex; gap: 6px; margin-top: 6px; }
+    .ty-widget__item-photo { width: 56px; height: 56px; object-fit: cover; border-radius: 6px; }
     .ty-widget__filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
       padding: 10px 12px; background: #f6f6f6; border-radius: 8px; margin-bottom: 12px; font-size: 13px; }
     .ty-widget__stars { display: flex; gap: 6px; border: none; padding: 0; margin: 0; }
@@ -61,7 +74,7 @@ function injectStylesOnce() {
       background: #fff; cursor: pointer; }
     .ty-widget__pagination button:disabled { opacity: 0.4; cursor: default; }
   `;
-  document.head.appendChild(style);
+  root.appendChild(style);
 }
 
 function buildQueryString(state: FilterState): string {
@@ -78,6 +91,27 @@ function buildQueryString(state: FilterState): string {
   return params.toString();
 }
 
+function renderRatingDistribution(summary: Summary): string {
+  const counts = summary.ratingCounts;
+  if (!counts) return "";
+  const max = Math.max(1, ...[1, 2, 3, 4, 5].map((s) => counts[String(s)] ?? 0));
+
+  const rows = [5, 4, 3, 2, 1]
+    .map((s) => {
+      const count = counts[String(s)] ?? 0;
+      const widthPct = Math.round((count / max) * 100);
+      return `
+        <div class="ty-widget__rating-row" data-role="rating-bar" data-star="${s}">
+          <span class="ty-widget__rating-row-label">${s}★</span>
+          <span class="ty-widget__rating-row-track"><span class="ty-widget__rating-row-fill" style="width:${widthPct}%"></span></span>
+          <span class="ty-widget__rating-row-count">${count}</span>
+        </div>`;
+    })
+    .join("");
+
+  return `<div class="ty-widget__rating-distribution">${rows}</div>`;
+}
+
 function renderShell(summary: Summary): string {
   const starOptions = [5, 4, 3, 2, 1]
     .map((s) => `<label><input type="checkbox" data-star="${s}"> ${s}★</label>`)
@@ -86,6 +120,7 @@ function renderShell(summary: Summary): string {
   return `
     <div class="ty-widget">
       <div class="ty-widget__summary">Ortalama Puan: ${summary.averageRating.toFixed(1)} (${summary.totalReviews} yorum)</div>
+      ${renderRatingDistribution(summary)}
       <div class="ty-widget__filters">
         <fieldset class="ty-widget__stars">${starOptions}</fieldset>
         <label>Başlangıç <input type="date" data-field="dateFrom"></label>
@@ -114,19 +149,26 @@ function renderReviewItems(reviews: ReviewItem[]): string {
     return `<li class="ty-widget__empty">Bu filtrelere uyan yorum bulunamadı.</li>`;
   }
   return reviews
-    .map(
-      (r) => `
+    .map((r) => {
+      const photos = (r.photoUrls ?? [])
+        .map((url) => `<img src="${escapeHtml(url)}" alt="" loading="lazy" class="ty-widget__item-photo">`)
+        .join("");
+      return `
         <li class="ty-widget__item">
           <span class="ty-widget__item-rating">${escapeHtml(String(r.rating))}★</span>
           <span class="ty-widget__item-author">${escapeHtml(r.authorName)}:</span>
           ${escapeHtml(r.comment)}
-        </li>`
-    )
+          ${photos ? `<div class="ty-widget__item-photos">${photos}</div>` : ""}
+        </li>`;
+    })
     .join("");
 }
 
 export async function renderReviewWidget(container: HTMLElement, options: WidgetOptions) {
   const { apiBaseUrl, productId } = options;
+  // Widget kendi stilini ve DOM'unu shadow DOM içinde izole eder ki host sitenin
+  // CSS'i ile çakışmasın (bkz. design.md bölüm 7).
+  const root = container.shadowRoot ?? container.attachShadow({ mode: "open" });
 
   const state: FilterState = {
     stars: new Set(),
@@ -138,7 +180,7 @@ export async function renderReviewWidget(container: HTMLElement, options: Widget
     page: 1,
   };
 
-  container.innerHTML = `<div data-testid="loading">Yorumlar yükleniyor...</div>`;
+  root.innerHTML = `<div data-testid="loading">Yorumlar yükleniyor...</div>`;
 
   let summary: Summary;
   let initialReviews: ReviewsResponse;
@@ -147,20 +189,23 @@ export async function renderReviewWidget(container: HTMLElement, options: Widget
       fetch(`${apiBaseUrl}/api/v1/products/${productId}/summary`),
       fetch(`${apiBaseUrl}/api/v1/products/${productId}/reviews?${buildQueryString(state)}`),
     ]);
+    if (!summaryRes.ok || !reviewsRes.ok) {
+      throw new Error("API'den başarısız yanıt");
+    }
     summary = await summaryRes.json();
     initialReviews = await reviewsRes.json();
   } catch {
-    container.innerHTML = `<div class="ty-widget__error">Yorumlar şu an yüklenemiyor.</div>`;
+    root.innerHTML = `<div class="ty-widget__error">Yorumlar şu an yüklenemiyor.</div>`;
     return;
   }
 
-  injectStylesOnce();
-  container.innerHTML = renderShell(summary);
+  root.innerHTML = renderShell(summary);
+  injectStylesOnce(root);
 
-  const listEl = container.querySelector<HTMLUListElement>('[data-role="list"]')!;
-  const pageInfoEl = container.querySelector<HTMLElement>('[data-role="page-info"]')!;
-  const prevBtn = container.querySelector<HTMLButtonElement>('[data-action="prev"]')!;
-  const nextBtn = container.querySelector<HTMLButtonElement>('[data-action="next"]')!;
+  const listEl = root.querySelector<HTMLUListElement>('[data-role="list"]')!;
+  const pageInfoEl = root.querySelector<HTMLElement>('[data-role="page-info"]')!;
+  const prevBtn = root.querySelector<HTMLButtonElement>('[data-action="prev"]')!;
+  const nextBtn = root.querySelector<HTMLButtonElement>('[data-action="next"]')!;
 
   function applyPagination(pagination: ReviewsResponse["pagination"]) {
     const totalPages = Math.max(1, Math.ceil(pagination.total / pagination.pageSize));
@@ -181,7 +226,7 @@ export async function renderReviewWidget(container: HTMLElement, options: Widget
     }
   }
 
-  container.querySelectorAll<HTMLInputElement>("[data-star]").forEach((checkbox) => {
+  root.querySelectorAll<HTMLInputElement>("[data-star]").forEach((checkbox) => {
     checkbox.addEventListener("change", () => {
       const star = Number(checkbox.dataset.star);
       if (checkbox.checked) state.stars.add(star);
@@ -191,26 +236,26 @@ export async function renderReviewWidget(container: HTMLElement, options: Widget
     });
   });
 
-  container.querySelector<HTMLInputElement>('[data-field="dateFrom"]')!.addEventListener("change", (e) => {
+  root.querySelector<HTMLInputElement>('[data-field="dateFrom"]')!.addEventListener("change", (e) => {
     state.dateFrom = (e.target as HTMLInputElement).value;
     state.page = 1;
     void loadReviews();
   });
 
-  container.querySelector<HTMLInputElement>('[data-field="dateTo"]')!.addEventListener("change", (e) => {
+  root.querySelector<HTMLInputElement>('[data-field="dateTo"]')!.addEventListener("change", (e) => {
     state.dateTo = (e.target as HTMLInputElement).value;
     state.page = 1;
     void loadReviews();
   });
 
-  container.querySelector<HTMLInputElement>('[data-field="hasPhoto"]')!.addEventListener("change", (e) => {
+  root.querySelector<HTMLInputElement>('[data-field="hasPhoto"]')!.addEventListener("change", (e) => {
     state.hasPhoto = (e.target as HTMLInputElement).checked;
     state.page = 1;
     void loadReviews();
   });
 
   let searchDebounceHandle: ReturnType<typeof setTimeout> | undefined;
-  container.querySelector<HTMLInputElement>('[data-field="q"]')!.addEventListener("input", (e) => {
+  root.querySelector<HTMLInputElement>('[data-field="q"]')!.addEventListener("input", (e) => {
     const value = (e.target as HTMLInputElement).value;
     if (searchDebounceHandle) clearTimeout(searchDebounceHandle);
     searchDebounceHandle = setTimeout(() => {
@@ -220,7 +265,7 @@ export async function renderReviewWidget(container: HTMLElement, options: Widget
     }, 400);
   });
 
-  container.querySelector<HTMLSelectElement>('[data-field="sort"]')!.addEventListener("change", (e) => {
+  root.querySelector<HTMLSelectElement>('[data-field="sort"]')!.addEventListener("change", (e) => {
     state.sort = (e.target as HTMLSelectElement).value as SortValue;
     state.page = 1;
     void loadReviews();

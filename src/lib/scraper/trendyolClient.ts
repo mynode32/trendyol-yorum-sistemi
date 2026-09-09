@@ -4,6 +4,8 @@ import { parseReviewResponse, type ParsedReview } from "./parser";
 const BACKOFF_MS = [5000, 15000, 45000];
 const REQUEST_DELAY_RANGE_MS: [number, number] = [1000, 3000];
 const WARMUP_URL = "https://www.trendyol.com/";
+// totalPages hiç gelmezse (API zarfı değişmişse) sonsuz döngüye düşmemek için üst sınır.
+const MAX_PAGES = 500;
 
 export type PageFetcher = (url: string) => Promise<{ status: number; body: string }>;
 
@@ -59,7 +61,7 @@ export async function fetchAllReviewsWithFetcher(
     page += 1;
 
     const reachedTotalPages = totalPages !== undefined && page >= totalPages;
-    if (pageReviews.length === 0 || reachedTotalPages) {
+    if (pageReviews.length === 0 || reachedTotalPages || page >= MAX_PAGES) {
       break;
     }
 

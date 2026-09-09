@@ -17,12 +17,15 @@ Tasarım ve plan dokümanları:
 
 | Değişken | Açıklama |
 |---|---|
-| `DATABASE_URL` | PostgreSQL bağlantı adresi, örn. `postgresql://trendyol:trendyol@localhost:5432/trendyol_reviews` |
+| `DATABASE_URL` | PostgreSQL bağlantı adresi, örn. `postgresql://trendyol:trendyol@localhost:5432/trendyol_reviews`. Supabase kullanılıyorsa: pooled (pgbouncer, port 6543) bağlantı. |
+| `DIRECT_URL` | Migration'lar için doğrudan (havuzsuz) bağlantı adresi. Yerelde `DATABASE_URL` ile aynı olabilir; Supabase'de port 5432 olan bağlantı adresi kullanılır. |
 | `ADMIN_PASSWORD` | Admin paneline giriş şifresi (tek kullanıcı) |
 | `SESSION_SECRET` | Oturum cookie'sini imzalayan HMAC anahtarı; en az 32 karakterlik rastgele bir dize kullanın |
 
 Oturumlar 24 saat sonra sunucu tarafında geçersiz olur (`MAX_SESSION_AGE_MS`).
 `SESSION_SECRET` değiştirilirse mevcut tüm oturumlar anında geçersiz olur.
+Admin girişinde aynı IP'den 15 dakika içinde 5 başarısız denemeden sonra
+`429 RATE_LIMITED` döner (bkz. `src/lib/auth/rateLimit.ts`).
 
 ## Yerel kurulum
 

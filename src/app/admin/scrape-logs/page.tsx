@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { adminFetch } from "@/lib/adminFetch";
 
 type ScrapeLog = {
   id: string;
@@ -15,7 +16,7 @@ export default function ScrapeLogsPage() {
   const [logs, setLogs] = useState<ScrapeLog[]>([]);
 
   useEffect(() => {
-    fetch("/api/admin/scrape-logs")
+    adminFetch("/api/admin/scrape-logs")
       .then((res) => res.json())
       .then((body) => setLogs(body.data));
   }, []);

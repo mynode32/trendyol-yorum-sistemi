@@ -70,4 +70,28 @@ describe("fetchAllReviewsWithFetcher", () => {
     expect(reviews).toHaveLength(0);
     expect(fetchPage).toHaveBeenCalledTimes(1);
   });
+
+  it("stops after a hard page cap even if totalPages never arrives and pages keep returning items", async () => {
+    vi.useFakeTimers();
+    try {
+      const pageWithItem = {
+        isSuccess: true,
+        result: {
+          reviews: [
+            { id: 1, rate: 5, comment: "Harika", userFullName: "A", likesCount: 0, createdAt: 1700000000000, mediaFiles: [] },
+          ],
+        },
+      };
+
+      const fetchPage = vi.fn().mockResolvedValue({ status: 200, body: JSON.stringify(pageWithItem) });
+
+      const resultPromise = fetchAllReviewsWithFetcher("1071760667", fetchPage);
+      await vi.advanceTimersByTimeAsync(24 * 60 * 60 * 1000);
+      await resultPromise;
+
+      expect(fetchPage.mock.calls.length).toBeLessThanOrEqual(500);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
