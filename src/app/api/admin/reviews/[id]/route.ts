@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/api/errors";
+import { syncDisplayedReviews } from "@/lib/scraper/displaySync";
 
 const patchBodySchema = z.object({ isHidden: z.boolean() });
 
@@ -29,6 +30,9 @@ export async function PATCH(
       where: { id },
       data: { isHidden },
     });
+    // Gizleme/gösterme kararı vitrindeki N yorumu değiştirebilir: bir yorum
+    // gizlenince sıradaki uygun yorum onun yerini almalı.
+    await syncDisplayedReviews(review.productId);
     return NextResponse.json(review);
   } catch {
     // Prisma bilinmeyen id için P2025 fırlatır; 500 yerine 404 dönüyoruz.

@@ -68,12 +68,13 @@ describe("parseReviewQuery", () => {
 });
 
 describe("buildReviewWhere", () => {
-  it("always restricts to approved and not-hidden reviews for a product", () => {
+  it("always restricts to approved, not-hidden, displayed reviews for a product", () => {
     const where = buildReviewWhere("prod-1", { sort: "newest", page: 1, pageSize: 20 });
     expect(where).toMatchObject({
       productId: "prod-1",
       isApproved: true,
       isHidden: false,
+      isDisplayed: true,
     });
   });
 

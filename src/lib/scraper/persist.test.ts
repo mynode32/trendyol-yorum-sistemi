@@ -8,6 +8,8 @@ describe("scrapeProduct", () => {
     await prisma.scrapeLog.deleteMany();
     await prisma.review.deleteMany();
     await prisma.product.deleteMany();
+    // Varsayılan: ürün bilgisi bulunamadı — testler ilgilendiğinde kendi mock'unu koyar.
+    vi.spyOn(client, "fetchProductInfo").mockResolvedValue({ name: null, imageUrl: null });
   });
 
   afterAll(async () => {
@@ -96,6 +98,79 @@ describe("scrapeProduct", () => {
     expect(result.newReviews).toBe(2);
     const stored = await prisma.review.findMany({ where: { productId: product.id }, orderBy: { rating: "asc" } });
     expect(stored.map((r) => r.rating)).toEqual([4, 5]);
+  });
+
+  it("marks only the newest maxDisplayedReviews reviews as displayed after scraping", async () => {
+    const product = await prisma.product.create({
+      data: { trendyolProductId: "p-4", trendyolUrl: "https://x", name: "Ürün 4", maxDisplayedReviews: 2 },
+    });
+
+    vi.spyOn(client, "fetchAllReviews").mockResolvedValue([
+      { trendyolReviewId: "r-old", rating: 5, comment: "Eski", authorName: "A", hasPhoto: false, photoUrls: [], reviewDate: new Date("2026-01-01"), helpfulCount: 0 },
+      { trendyolReviewId: "r-mid", rating: 5, comment: "Orta", authorName: "B", hasPhoto: false, photoUrls: [], reviewDate: new Date("2026-01-02"), helpfulCount: 0 },
+      { trendyolReviewId: "r-new", rating: 5, comment: "Yeni", authorName: "C", hasPhoto: false, photoUrls: [], reviewDate: new Date("2026-01-03"), helpfulCount: 0 },
+    ]);
+
+    await scrapeProduct(product.id);
+
+    const stored = await prisma.review.findMany({
+      where: { productId: product.id },
+      orderBy: { reviewDate: "desc" },
+    });
+    expect(stored.map((r) => [r.trendyolReviewId, r.isDisplayed])).toEqual([
+      ["r-new", true],
+      ["r-mid", true],
+      ["r-old", false],
+    ]);
+  });
+
+  it("fills in the real product name/image on first scrape when they're not known yet", async () => {
+    const product = await prisma.product.create({
+      data: { trendyolProductId: "p-5", trendyolUrl: "https://x/urun", name: "Ürün p-5" },
+    });
+    vi.spyOn(client, "fetchAllReviews").mockResolvedValue([]);
+    vi.spyOn(client, "fetchProductInfo").mockResolvedValue({
+      name: "Gerçek Ürün Adı",
+      imageUrl: "https://cdn.example/gorsel.jpg",
+    });
+
+    await scrapeProduct(product.id);
+
+    const updated = await prisma.product.findUniqueOrThrow({ where: { id: product.id } });
+    expect(updated.name).toBe("Gerçek Ürün Adı");
+    expect(updated.imageUrl).toBe("https://cdn.example/gorsel.jpg");
+  });
+
+  it("does not re-fetch product info once the image is already known", async () => {
+    const product = await prisma.product.create({
+      data: {
+        trendyolProductId: "p-6",
+        trendyolUrl: "https://x/urun",
+        name: "Zaten Bilinen Ürün",
+        imageUrl: "https://cdn.example/eski.jpg",
+      },
+    });
+    vi.spyOn(client, "fetchAllReviews").mockResolvedValue([]);
+    const infoSpy = vi.spyOn(client, "fetchProductInfo");
+
+    await scrapeProduct(product.id);
+
+    expect(infoSpy).not.toHaveBeenCalled();
+  });
+
+  it("keeps scraping successful when fetchProductInfo fails", async () => {
+    const product = await prisma.product.create({
+      data: { trendyolProductId: "p-7", trendyolUrl: "https://x/urun", name: "Ürün p-7" },
+    });
+    vi.spyOn(client, "fetchAllReviews").mockResolvedValue([]);
+    vi.spyOn(client, "fetchProductInfo").mockRejectedValue(new Error("sayfa yüklenemedi"));
+
+    const result = await scrapeProduct(product.id);
+
+    expect(result.status).toBe("success");
+    const updated = await prisma.product.findUniqueOrThrow({ where: { id: product.id } });
+    expect(updated.name).toBe("Ürün p-7");
+    expect(updated.imageUrl).toBeNull();
   });
 
   it("writes a failed ScrapeLog when fetchAllReviews throws, without stopping the process", async () => {

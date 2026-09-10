@@ -71,6 +71,28 @@ export async function fetchAllReviewsWithFetcher(
   return allReviews;
 }
 
+export type ProductInfo = { name: string | null; imageUrl: string | null };
+
+/** Ürün sayfasının og:title/og:image meta etiketlerinden gerçek ad ve görseli çeker. */
+export async function fetchProductInfo(trendyolUrl: string): Promise<ProductInfo> {
+  const browser = await chromium.launch({ headless: false });
+  try {
+    const context = await browser.newContext({ locale: "tr-TR" });
+    const page = await context.newPage();
+    await page.goto(trendyolUrl, { waitUntil: "domcontentloaded" });
+    // page.evaluate, geçirilen fonksiyonu string'e çevirip izole tarayıcı bağlamında
+    // çalıştırır — içeride adlandırılmış bir yardımcı fonksiyon tanımlamak (esbuild'in
+    // isim koruma sarmalayıcısı __name üzerinden) o bağlamda ReferenceError'a yol açar.
+    // Bu yüzden burada ayrı bir yardımcı yerine iki satır doğrudan yazılıyor.
+    return await page.evaluate(() => ({
+      name: document.querySelector('meta[property="og:title"]')?.getAttribute("content") ?? null,
+      imageUrl: document.querySelector('meta[property="og:image"]')?.getAttribute("content") ?? null,
+    }));
+  } finally {
+    await browser.close();
+  }
+}
+
 export async function fetchAllReviews(trendyolProductId: string): Promise<ParsedReview[]> {
   // headless: false ZORUNLU — Cloudflare headless Chromium'u ana sayfa ısınma
   // isteğinde dahi 403 ile engelliyor (otomasyon parmak izi; headed modda aynı

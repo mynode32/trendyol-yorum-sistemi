@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/db";
-import { fetchAllReviews } from "./trendyolClient";
+import { fetchAllReviews, fetchProductInfo } from "./trendyolClient";
+import { syncDisplayedReviews } from "./displaySync";
+import type { Product } from "@prisma/client";
 
 const UPDATE_BATCH_SIZE = 25;
 
@@ -40,6 +42,24 @@ async function updateExistingReviews(reviews: StoredReviewData[], existingIds: S
         })
       )
     );
+  }
+}
+
+/** Ürün adı/görseli henüz bilinmiyorsa (imageUrl null) bir kereye mahsus çeker.
+ * Başarısız olursa taramayı bozmaz — mevcut ad/görsel korunur, sonraki taramada tekrar denenir. */
+async function fetchProductNameAndImage(
+  product: Product
+): Promise<{ name?: string; imageUrl?: string }> {
+  if (product.imageUrl != null) return {};
+  try {
+    const info = await fetchProductInfo(product.trendyolUrl);
+    return {
+      ...(info.name ? { name: info.name } : {}),
+      ...(info.imageUrl ? { imageUrl: info.imageUrl } : {}),
+    };
+  } catch (error) {
+    console.error(`[scraper] Ürün ${product.id} için ad/görsel çekilemedi:`, error);
+    return {};
   }
 }
 
@@ -84,10 +104,12 @@ export async function scrapeProduct(
     await updateExistingReviews(reviewData, existingIds);
     const newCount = created.count;
 
+    const productInfo = await fetchProductNameAndImage(product);
     await prisma.product.update({
       where: { id: product.id },
-      data: { lastScrapedAt: new Date() },
+      data: { lastScrapedAt: new Date(), ...productInfo },
     });
+    await syncDisplayedReviews(product.id);
 
     await prisma.scrapeLog.create({
       data: {

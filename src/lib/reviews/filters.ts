@@ -112,6 +112,7 @@ export function buildReviewWhere(
     productId,
     isApproved: true,
     isHidden: false,
+    isDisplayed: true,
   };
 
   if (query.stars) {

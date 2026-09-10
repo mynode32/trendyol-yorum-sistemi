@@ -18,7 +18,7 @@ export async function GET(
     return jsonError("PRODUCT_NOT_FOUND", "Ürün bulunamadı", 404, CORS_HEADERS);
   }
 
-  const baseWhere = { productId: id, isApproved: true, isHidden: false };
+  const baseWhere = { productId: id, isApproved: true, isHidden: false, isDisplayed: true };
 
   const grouped = await prisma.review.groupBy({
     by: ["rating"],

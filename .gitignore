@@ -41,6 +41,9 @@ yarn-error.log*
 /.devdb/
 .devdb.log
 
+# Windows Görev Zamanlayıcı worker çıktısı (bkz. scripts/run-scheduled-scrape.bat)
+scripts/scheduled-scrape.log
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

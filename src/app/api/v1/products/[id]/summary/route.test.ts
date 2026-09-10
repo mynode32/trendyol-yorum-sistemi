@@ -21,10 +21,10 @@ describe("GET /api/v1/products/:id/summary", () => {
 
     await prisma.review.createMany({
       data: [
-        { productId: product.id, trendyolReviewId: "r1", rating: 5, comment: "a", authorName: "A", reviewDate: new Date() },
-        { productId: product.id, trendyolReviewId: "r2", rating: 5, comment: "b", authorName: "B", reviewDate: new Date() },
-        { productId: product.id, trendyolReviewId: "r3", rating: 1, comment: "c", authorName: "C", reviewDate: new Date() },
-        { productId: product.id, trendyolReviewId: "r4", rating: 5, comment: "gizli", authorName: "D", reviewDate: new Date(), isHidden: true },
+        { productId: product.id, trendyolReviewId: "r1", rating: 5, comment: "a", authorName: "A", reviewDate: new Date(), isDisplayed: true },
+        { productId: product.id, trendyolReviewId: "r2", rating: 5, comment: "b", authorName: "B", reviewDate: new Date(), isDisplayed: true },
+        { productId: product.id, trendyolReviewId: "r3", rating: 1, comment: "c", authorName: "C", reviewDate: new Date(), isDisplayed: true },
+        { productId: product.id, trendyolReviewId: "r4", rating: 5, comment: "gizli", authorName: "D", reviewDate: new Date(), isHidden: true, isDisplayed: true },
       ],
     });
 

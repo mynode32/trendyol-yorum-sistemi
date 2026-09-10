@@ -16,11 +16,16 @@ model Product {
   trendyolProductId String      @unique
   trendyolUrl       String
   name              String
+  // Trendyol ürün sayfasından (og:image) çekilir; ilk taramaya kadar null kalır.
+  imageUrl          String?
   isTracked         Boolean     @default(true)
   // Ayarlanırsa, scraper bu puanın altındaki yorumları hiç depolamaz (1-5).
   // null = filtresiz, tüm puanlar çekilir. Geriye dönük mevcut yorumları etkilemez,
   // yalnızca bundan sonraki taramalarda neyin depolanacağını belirler.
   minRating         Int?
+  // Sitede aynı anda en fazla bu kadar yorum "vitrin"de tutulur (en yeni N).
+  // Yeni uygun bir yorum eklendiğinde en eskisi vitrinden düşer.
+  maxDisplayedReviews Int       @default(50)
   lastScrapedAt     DateTime?
   createdAt         DateTime    @default(now())
   reviews           Review[]
@@ -42,11 +47,14 @@ model Review {
   commentLength    Int      @default(0)
   isApproved       Boolean  @default(true)
   isHidden         Boolean  @default(false)
+  // syncDisplayedReviews tarafından hesaplanır: vitrindeki (en yeni N) yorumları işaretler.
+  isDisplayed      Boolean  @default(false)
   createdAt        DateTime @default(now())
 
   @@index([productId, rating])
   @@index([productId, reviewDate])
   @@index([productId, commentLength])
+  @@index([productId, isDisplayed])
 }
 
 model ScrapeLog {

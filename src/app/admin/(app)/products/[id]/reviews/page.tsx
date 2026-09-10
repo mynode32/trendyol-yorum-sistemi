@@ -9,6 +9,7 @@ type Review = {
   comment: string;
   authorName: string;
   isHidden: boolean;
+  isDisplayed: boolean;
   photoUrls: string[];
 };
 
@@ -49,6 +50,9 @@ export default function ProductReviewsModerationPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isHidden: !review.isHidden }),
     });
+    // Gizleme/gösterme, hangi yorumun vitrinde göründüğünü değiştirebilir
+    // (sıradaki uygun yorum yerini alabilir) — güncel isDisplayed durumunu görmek için yeniden yükle.
+    await load();
   }
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -94,6 +98,7 @@ export default function ProductReviewsModerationPage() {
                   <span style={{ color: "var(--accent)", fontWeight: 600 }}>{r.rating}★</span>
                   <span style={{ fontWeight: 500 }}>{r.authorName}</span>
                   {r.isHidden && <span className="badge badge-neutral">Gizli</span>}
+                  {r.isDisplayed && <span className="badge badge-success">Sitede görünüyor</span>}
                 </div>
                 <p style={{ color: "var(--text-muted)" }}>{r.comment}</p>
                 {r.photoUrls.length > 0 && (

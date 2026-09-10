@@ -1,14 +1,16 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { adminFetch } from "@/lib/adminFetch";
 
 type Product = {
   id: string;
   name: string;
+  imageUrl: string | null;
   trendyolUrl: string;
   isTracked: boolean;
   lastScrapedAt: string | null;
   minRating: number | null;
+  maxDisplayedReviews: number;
 };
 
 function formatDate(value: string | null): string {
@@ -29,6 +31,8 @@ export default function ProductsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [actionProductId, setActionProductId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [widgetCodeProductId, setWidgetCodeProductId] = useState<string | null>(null);
+  const [copiedProductId, setCopiedProductId] = useState<string | null>(null);
 
   async function load() {
     try {
@@ -110,6 +114,41 @@ export default function ProductsPage() {
       setError("Minimum puan güncellenemedi.");
     } finally {
       setActionProductId(null);
+    }
+  }
+
+  async function updateMaxDisplayedReviews(product: Product, rawValue: string) {
+    const maxDisplayedReviews = Number(rawValue);
+    if (!Number.isInteger(maxDisplayedReviews) || maxDisplayedReviews < 1) return;
+    setActionProductId(product.id);
+    setError(null);
+    try {
+      const res = await adminFetch(`/api/admin/products/${product.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ maxDisplayedReviews }),
+      });
+      if (!res.ok) throw new Error();
+      await load();
+    } catch {
+      setError("Gösterilecek yorum sayısı güncellenemedi.");
+    } finally {
+      setActionProductId(null);
+    }
+  }
+
+  function widgetSnippet(product: Product): string {
+    const apiBaseUrl = typeof window !== "undefined" ? window.location.origin : "";
+    return `<script src="${apiBaseUrl}/widget/widget.js" data-product-id="${product.id}"></script>`;
+  }
+
+  async function copyWidgetSnippet(product: Product) {
+    try {
+      await navigator.clipboard.writeText(widgetSnippet(product));
+      setCopiedProductId(product.id);
+      setTimeout(() => setCopiedProductId((id) => (id === product.id ? null : id)), 2000);
+    } catch {
+      setError("Kod panoya kopyalanamadı, elle seçip kopyalayın.");
     }
   }
 
@@ -234,23 +273,39 @@ export default function ProductsPage() {
                 <th>Ürün</th>
                 <th>Durum</th>
                 <th>Minimum puan</th>
+                <th>Sitede gösterilecek yorum</th>
                 <th>Son tarama</th>
                 <th aria-label="işlemler"></th>
               </tr>
             </thead>
             <tbody>
               {products.map((p) => (
-                <tr key={p.id}>
+                <Fragment key={p.id}>
+                <tr>
                   <td style={{ whiteSpace: "normal" }}>
-                    <div style={{ fontWeight: 500 }}>{p.name}</div>
-                    <a
-                      href={p.trendyolUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{ fontSize: 12, color: "var(--text-faint)" }}
-                    >
-                      trendyol.com&apos;da gör ↗
-                    </a>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      {p.imageUrl && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={p.imageUrl}
+                          alt=""
+                          width={36}
+                          height={36}
+                          style={{ borderRadius: "var(--radius-sm)", objectFit: "cover", flexShrink: 0 }}
+                        />
+                      )}
+                      <div>
+                        <div style={{ fontWeight: 500 }}>{p.name}</div>
+                        <a
+                          href={p.trendyolUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ fontSize: 12, color: "var(--text-faint)" }}
+                        >
+                          trendyol.com&apos;da gör ↗
+                        </a>
+                      </div>
+                    </div>
                   </td>
                   <td>
                     <span className={`badge ${p.isTracked ? "badge-success" : "badge-neutral"}`}>
@@ -271,12 +326,29 @@ export default function ProductsPage() {
                       <option value="5">Sadece 5★</option>
                     </select>
                   </td>
+                  <td>
+                    <input
+                      type="number"
+                      min={1}
+                      className="input"
+                      style={{ height: 32, fontSize: 13, padding: "0 8px", width: 72 }}
+                      defaultValue={p.maxDisplayedReviews}
+                      onBlur={(e) => updateMaxDisplayedReviews(p, e.target.value)}
+                      disabled={actionProductId === p.id}
+                    />
+                  </td>
                   <td style={{ color: "var(--text-muted)" }}>{formatDate(p.lastScrapedAt)}</td>
                   <td>
                     <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
                       <a href={`/admin/products/${p.id}/reviews`} className="btn btn-secondary btn-sm">
                         Yorumlar
                       </a>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => setWidgetCodeProductId(widgetCodeProductId === p.id ? null : p.id)}
+                      >
+                        Widget kodu
+                      </button>
                       <button className="btn btn-secondary btn-sm" onClick={() => scrapeNow(p)} disabled={actionProductId === p.id}>
                         {actionProductId === p.id ? "Taranıyor…" : "Şimdi Tara"}
                       </button>
@@ -289,6 +361,34 @@ export default function ProductsPage() {
                     </div>
                   </td>
                 </tr>
+                {widgetCodeProductId === p.id && (
+                  <tr>
+                    <td colSpan={6} style={{ background: "var(--surface-muted)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                        <code
+                          style={{
+                            fontSize: 12,
+                            background: "var(--surface)",
+                            border: "1px solid var(--border)",
+                            borderRadius: "var(--radius-sm)",
+                            padding: "6px 10px",
+                            flex: "1 1 320px",
+                            overflowX: "auto",
+                          }}
+                        >
+                          {widgetSnippet(p)}
+                        </code>
+                        <button className="btn btn-secondary btn-sm" onClick={() => copyWidgetSnippet(p)}>
+                          {copiedProductId === p.id ? "Kopyalandı ✓" : "Kopyala"}
+                        </button>
+                      </div>
+                      <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 6 }}>
+                        Bu kodu müşterinin sitesinde yorumların görünmesini istediğiniz yere yapıştırın.
+                      </p>
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               ))}
             </tbody>
           </table>

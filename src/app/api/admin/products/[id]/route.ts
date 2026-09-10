@@ -2,15 +2,23 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/api/errors";
+import { syncDisplayedReviews } from "@/lib/scraper/displaySync";
 
 const patchBodySchema = z
   .object({
     isTracked: z.boolean().optional(),
     minRating: z.number().int().min(1).max(5).nullable().optional(),
+    maxDisplayedReviews: z.number().int().min(1).max(500).optional(),
   })
-  .refine((data) => data.isTracked !== undefined || data.minRating !== undefined, {
-    message: "isTracked veya minRating alanlarından en az biri gönderilmeli",
-  });
+  .refine(
+    (data) =>
+      data.isTracked !== undefined ||
+      data.minRating !== undefined ||
+      data.maxDisplayedReviews !== undefined,
+    {
+      message: "isTracked, minRating veya maxDisplayedReviews alanlarından en az biri gönderilmeli",
+    }
+  );
 
 export async function PATCH(
   request: Request,
@@ -29,11 +37,11 @@ export async function PATCH(
   if (!parsed.success) {
     return jsonError(
       "INVALID_BODY",
-      "isTracked boolean, minRating 1-5 arası bir tam sayı ya da null olmalı",
+      "isTracked boolean, minRating 1-5 arası bir tam sayı/null, maxDisplayedReviews 1-500 arası bir tam sayı olmalı",
       400
     );
   }
-  const { isTracked, minRating } = parsed.data;
+  const { isTracked, minRating, maxDisplayedReviews } = parsed.data;
 
   try {
     const product = await prisma.product.update({
@@ -41,8 +49,11 @@ export async function PATCH(
       data: {
         ...(isTracked !== undefined ? { isTracked } : {}),
         ...(minRating !== undefined ? { minRating } : {}),
+        ...(maxDisplayedReviews !== undefined ? { maxDisplayedReviews } : {}),
       },
     });
+    // Vitrin boyutu değiştiyse yeni sınıra göre hemen yeniden hesapla.
+    if (maxDisplayedReviews !== undefined) await syncDisplayedReviews(id);
     return NextResponse.json(product);
   } catch {
     // Prisma bilinmeyen id için P2025 fırlatır; 500 yerine 404 dönüyoruz.
