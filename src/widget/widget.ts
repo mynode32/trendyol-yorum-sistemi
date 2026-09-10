@@ -21,7 +21,7 @@ function init() {
   container.id = `ty-widget-${productId}`;
   scriptTag?.insertAdjacentElement("afterend", container);
 
-  renderReviewWidget(container, { apiBaseUrl, productId });
+  renderReviewWidget(container, { apiBaseUrl, productId, accentColor: scriptTag?.dataset.accentColor });
 }
 
 init();

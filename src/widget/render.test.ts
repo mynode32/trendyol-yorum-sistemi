@@ -203,6 +203,71 @@ describe("renderReviewWidget", () => {
     expect(img!.src).toBe("https://example.com/photo1.jpg");
   });
 
+  it("renders a fixed 'Trendyol Yorumları' title", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.includes("/summary")) {
+          return Promise.resolve(new Response(JSON.stringify({ averageRating: 4.0, totalReviews: 1 })));
+        }
+        return Promise.resolve(
+          new Response(JSON.stringify({ data: [], pagination: { page: 1, pageSize: 20, total: 0 } }))
+        );
+      })
+    );
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    await renderReviewWidget(container, { apiBaseUrl: "http://localhost", productId: "prod-1" });
+
+    const title = container.shadowRoot!.querySelector(".ty-widget__title");
+    expect(title?.textContent).toBe("Trendyol Yorumları");
+  });
+
+  it("applies a custom accent color as a CSS variable on the host container when provided", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.includes("/summary")) {
+          return Promise.resolve(new Response(JSON.stringify({ averageRating: 4.0, totalReviews: 1 })));
+        }
+        return Promise.resolve(
+          new Response(JSON.stringify({ data: [], pagination: { page: 1, pageSize: 20, total: 0 } }))
+        );
+      })
+    );
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    await renderReviewWidget(container, {
+      apiBaseUrl: "http://localhost",
+      productId: "prod-1",
+      accentColor: "#8b6f52",
+    });
+
+    expect(container.style.getPropertyValue("--ty-accent")).toBe("#8b6f52");
+  });
+
+  it("leaves the accent color unset (CSS default applies) when not provided", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.includes("/summary")) {
+          return Promise.resolve(new Response(JSON.stringify({ averageRating: 4.0, totalReviews: 1 })));
+        }
+        return Promise.resolve(
+          new Response(JSON.stringify({ data: [], pagination: { page: 1, pageSize: 20, total: 0 } }))
+        );
+      })
+    );
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    await renderReviewWidget(container, { apiBaseUrl: "http://localhost", productId: "prod-1" });
+
+    expect(container.style.getPropertyValue("--ty-accent")).toBe("");
+  });
+
   it("renders filter controls (star checkboxes, date range, photo toggle, search, sort, pagination)", async () => {
     vi.stubGlobal(
       "fetch",

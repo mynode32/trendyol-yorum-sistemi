@@ -1,4 +1,4 @@
-type WidgetOptions = { apiBaseUrl: string; productId: string };
+type WidgetOptions = { apiBaseUrl: string; productId: string; accentColor?: string };
 
 type Summary = {
   averageRating: number;
@@ -48,12 +48,14 @@ function injectStylesOnce(root: ShadowRoot) {
   style.id = STYLE_TAG_ID;
   style.textContent = `
     .ty-widget { font-family: system-ui, sans-serif; max-width: 640px; color: #1a1a1a; }
+    .ty-widget__title { font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+      color: var(--ty-accent, #ff9500); margin: 0 0 10px; }
     .ty-widget__summary { font-size: 18px; font-weight: 600; margin-bottom: 12px; }
     .ty-widget__rating-distribution { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
     .ty-widget__rating-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #444; }
     .ty-widget__rating-row-label { width: 24px; }
     .ty-widget__rating-row-track { flex: 1; height: 6px; background: #eee; border-radius: 3px; overflow: hidden; }
-    .ty-widget__rating-row-fill { display: block; height: 100%; background: #ff9500; }
+    .ty-widget__rating-row-fill { display: block; height: 100%; background: var(--ty-accent, #ff9500); }
     .ty-widget__rating-row-count { width: 24px; text-align: right; }
     .ty-widget__item-photos { display: flex; gap: 6px; margin-top: 6px; }
     .ty-widget__item-photo { width: 56px; height: 56px; object-fit: cover; border-radius: 6px; }
@@ -119,6 +121,7 @@ function renderShell(summary: Summary): string {
 
   return `
     <div class="ty-widget">
+      <div class="ty-widget__title">Trendyol Yorumları</div>
       <div class="ty-widget__summary">Ortalama Puan: ${summary.averageRating.toFixed(1)} (${summary.totalReviews} yorum)</div>
       ${renderRatingDistribution(summary)}
       <div class="ty-widget__filters">
@@ -165,8 +168,11 @@ function renderReviewItems(reviews: ReviewItem[]): string {
 }
 
 export async function renderReviewWidget(container: HTMLElement, options: WidgetOptions) {
-  const { apiBaseUrl, productId } = options;
+  const { apiBaseUrl, productId, accentColor } = options;
   const encodedProductId = encodeURIComponent(productId);
+  // Shadow DOM içindeki stiller CSS custom property'lerini host elemandan miras alır —
+  // bu sayede her müşteri kendi marka rengini widget'ı değiştirmeden verebilir.
+  if (accentColor) container.style.setProperty("--ty-accent", accentColor);
   // Widget kendi stilini ve DOM'unu shadow DOM içinde izole eder ki host sitenin
   // CSS'i ile çakışmasın (bkz. design.md bölüm 7).
   const root = container.shadowRoot ?? container.attachShadow({ mode: "open" });
