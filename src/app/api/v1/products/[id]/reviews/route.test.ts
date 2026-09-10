@@ -96,6 +96,42 @@ describe("GET /api/v1/products/:id/reviews", () => {
     ]);
   });
 
+  it("pools reviews from sibling products sharing reviewGroupId + storeId", async () => {
+    const a = await prisma.product.create({
+      data: {
+        trendyolProductId: "p-140",
+        trendyolUrl: "https://x",
+        name: "140cm",
+        storeId: "enwood",
+        reviewGroupId: "capella-tv-unitesi",
+      },
+    });
+    const b = await prisma.product.create({
+      data: {
+        trendyolProductId: "p-160",
+        trendyolUrl: "https://x",
+        name: "160cm",
+        storeId: "enwood",
+        reviewGroupId: "capella-tv-unitesi",
+      },
+    });
+    await prisma.review.create({
+      data: { productId: a.id, trendyolReviewId: "ra", rating: 5, comment: "140'ten", authorName: "A", reviewDate: new Date("2026-01-01"), isDisplayed: true },
+    });
+    await prisma.review.create({
+      data: { productId: b.id, trendyolReviewId: "rb", rating: 4, comment: "160'tan", authorName: "B", reviewDate: new Date("2026-01-02"), isDisplayed: true },
+    });
+
+    const response = await GET(makeRequest(`http://localhost/api/v1/products/${a.id}/reviews`), {
+      params: Promise.resolve({ id: a.id }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.map((r: { trendyolReviewId: string }) => r.trendyolReviewId).sort()).toEqual(["ra", "rb"]);
+    expect(body.pagination.total).toBe(2);
+  });
+
   it("returns 400 with an INVALID_QUERY error for a malformed query param", async () => {
     const product = await prisma.product.create({
       data: { trendyolProductId: "p-bad-query", trendyolUrl: "https://x", name: "Ürün" },

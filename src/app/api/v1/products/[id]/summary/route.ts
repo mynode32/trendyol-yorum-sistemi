@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { CORS_HEADERS } from "@/lib/api/cors";
 import { jsonError } from "@/lib/api/errors";
+import { resolveDisplayProductIds } from "@/lib/reviews/group";
 
 export function OPTIONS() {
   return new Response(null, { status: 204, headers: CORS_HEADERS });
@@ -18,7 +19,8 @@ export async function GET(
     return jsonError("PRODUCT_NOT_FOUND", "Ürün bulunamadı", 404, CORS_HEADERS);
   }
 
-  const baseWhere = { productId: id, isApproved: true, isHidden: false, isDisplayed: true };
+  const productIds = await resolveDisplayProductIds(product);
+  const baseWhere = { productId: { in: productIds }, isApproved: true, isHidden: false, isDisplayed: true };
 
   const grouped = await prisma.review.groupBy({
     by: ["rating"],

@@ -12,6 +12,7 @@ const patchBodySchema = z
     maxDisplayedReviews: z.number().int().min(1).max(500).optional(),
     externalRef: z.string().trim().min(1).max(200).nullable().optional(),
     storeId: z.string().trim().min(1).max(100).nullable().optional(),
+    reviewGroupId: z.string().trim().min(1).max(200).nullable().optional(),
   })
   .refine(
     (data) =>
@@ -19,10 +20,11 @@ const patchBodySchema = z
       data.minRating !== undefined ||
       data.maxDisplayedReviews !== undefined ||
       data.externalRef !== undefined ||
-      data.storeId !== undefined,
+      data.storeId !== undefined ||
+      data.reviewGroupId !== undefined,
     {
       message:
-        "isTracked, minRating, maxDisplayedReviews, externalRef veya storeId alanlarından en az biri gönderilmeli",
+        "isTracked, minRating, maxDisplayedReviews, externalRef, storeId veya reviewGroupId alanlarından en az biri gönderilmeli",
     }
   );
 
@@ -47,7 +49,7 @@ export async function PATCH(
       400
     );
   }
-  const { isTracked, minRating, maxDisplayedReviews, externalRef, storeId } = parsed.data;
+  const { isTracked, minRating, maxDisplayedReviews, externalRef, storeId, reviewGroupId } = parsed.data;
 
   try {
     const product = await prisma.product.update({
@@ -58,6 +60,7 @@ export async function PATCH(
         ...(maxDisplayedReviews !== undefined ? { maxDisplayedReviews } : {}),
         ...(externalRef !== undefined ? { externalRef } : {}),
         ...(storeId !== undefined ? { storeId } : {}),
+        ...(reviewGroupId !== undefined ? { reviewGroupId } : {}),
       },
     });
     // Vitrin boyutu değiştiyse yeni sınıra göre hemen yeniden hesapla.

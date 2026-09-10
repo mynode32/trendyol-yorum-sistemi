@@ -228,6 +228,28 @@ describe("/api/admin/products", () => {
     expect((await clearResponse.json()).externalRef).toBeNull();
   });
 
+  it("updates a product's reviewGroupId, and can clear it back to null", async () => {
+    const product = await prisma.product.create({
+      data: { trendyolProductId: "p1", trendyolUrl: "https://x", name: "Ürün" },
+    });
+
+    const request = new Request(`http://localhost/api/admin/products/${product.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ reviewGroupId: "capella-tv-unitesi" }),
+    });
+    const response = await PATCH(request, { params: Promise.resolve({ id: product.id }) });
+    expect(response.status).toBe(200);
+    expect((await response.json()).reviewGroupId).toBe("capella-tv-unitesi");
+
+    const clearRequest = new Request(`http://localhost/api/admin/products/${product.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ reviewGroupId: null }),
+    });
+    const clearResponse = await PATCH(clearRequest, { params: Promise.resolve({ id: product.id }) });
+    expect(clearResponse.status).toBe(200);
+    expect((await clearResponse.json()).reviewGroupId).toBeNull();
+  });
+
   it("returns 409 CONFLICT instead of 500 when externalRef already belongs to another product", async () => {
     await prisma.product.create({
       data: { trendyolProductId: "p1", trendyolUrl: "https://x", name: "Ürün 1", externalRef: "SKU-1" },

@@ -36,10 +36,17 @@ model Product {
   // yapıştırılması durumunda başka bir müşterinin yorumunun sızmasını engellemek
   // için storeId'nin de eşleşmesini zorunlu kılar.
   storeId           String?
+  // Aynı fiziksel ürünün farklı boy/beden varyantlarını (örn. 120/140/160cm) birbirine
+  // bağlar. Doldurulursa, bu değeri paylaşan ürünlerin yorumları widget'ta VE
+  // özet puanında birlikte (havuzlanmış) gösterilir — sırf santim farklı diye bir
+  // varyantın yorumsuz görünmesini önler. Boşsa ürün her zamanki gibi tek başına.
+  reviewGroupId     String?
   lastScrapedAt     DateTime?
   createdAt         DateTime    @default(now())
   reviews           Review[]
   scrapeLogs        ScrapeLog[]
+
+  @@index([reviewGroupId])
 }
 
 model Review {

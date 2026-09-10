@@ -8,6 +8,7 @@ import {
   buildReviewOrderBy,
   InvalidQueryError,
 } from "@/lib/reviews/filters";
+import { resolveDisplayProductIds } from "@/lib/reviews/group";
 
 export function OPTIONS() {
   return new Response(null, { status: 204, headers: CORS_HEADERS });
@@ -34,7 +35,8 @@ export async function GET(
     }
     throw error;
   }
-  const where = buildReviewWhere(id, query);
+  const productIds = await resolveDisplayProductIds(product);
+  const where = buildReviewWhere(productIds, query);
 
   const skip = (query.page - 1) * query.pageSize;
 

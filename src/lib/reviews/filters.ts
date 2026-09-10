@@ -105,11 +105,11 @@ export function parseReviewQuery(searchParams: URLSearchParams): ReviewQuery {
 }
 
 export function buildReviewWhere(
-  productId: string,
+  productId: string | string[],
   query: ReviewQuery
 ): Prisma.ReviewWhereInput {
   const where: Prisma.ReviewWhereInput = {
-    productId,
+    productId: Array.isArray(productId) ? { in: productId } : productId,
     isApproved: true,
     isHidden: false,
     isDisplayed: true,

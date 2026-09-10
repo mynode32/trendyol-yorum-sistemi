@@ -78,6 +78,11 @@ describe("buildReviewWhere", () => {
     });
   });
 
+  it("restricts to multiple productIds when given an array (grouped display)", () => {
+    const where = buildReviewWhere(["prod-1", "prod-2"], { sort: "newest", page: 1, pageSize: 20 });
+    expect(where.productId).toEqual({ in: ["prod-1", "prod-2"] });
+  });
+
   it("adds stars, date range, hasPhoto, and text search filters when present", () => {
     const where = buildReviewWhere("prod-1", {
       stars: [4, 5],

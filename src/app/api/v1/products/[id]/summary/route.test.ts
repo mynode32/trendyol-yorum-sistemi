@@ -38,4 +38,40 @@ describe("GET /api/v1/products/:id/summary", () => {
     expect(body.averageRating).toBeCloseTo((5 + 5 + 1) / 3, 2);
     expect(body.ratingCounts).toMatchObject({ "1": 1, "2": 0, "3": 0, "4": 0, "5": 2 });
   });
+
+  it("pools ratings from sibling products sharing reviewGroupId + storeId", async () => {
+    const a = await prisma.product.create({
+      data: {
+        trendyolProductId: "p-140",
+        trendyolUrl: "https://x",
+        name: "140cm",
+        storeId: "enwood",
+        reviewGroupId: "capella-tv-unitesi",
+      },
+    });
+    const b = await prisma.product.create({
+      data: {
+        trendyolProductId: "p-160",
+        trendyolUrl: "https://x",
+        name: "160cm",
+        storeId: "enwood",
+        reviewGroupId: "capella-tv-unitesi",
+      },
+    });
+    await prisma.review.create({
+      data: { productId: a.id, trendyolReviewId: "ra", rating: 5, comment: "a", authorName: "A", reviewDate: new Date(), isDisplayed: true },
+    });
+    await prisma.review.create({
+      data: { productId: b.id, trendyolReviewId: "rb", rating: 3, comment: "b", authorName: "B", reviewDate: new Date(), isDisplayed: true },
+    });
+
+    const response = await GET(new Request(`http://localhost/api/v1/products/${a.id}/summary`), {
+      params: Promise.resolve({ id: a.id }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.totalReviews).toBe(2);
+    expect(body.averageRating).toBeCloseTo((5 + 3) / 2, 2);
+  });
 });

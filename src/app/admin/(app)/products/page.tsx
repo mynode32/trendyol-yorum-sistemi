@@ -13,6 +13,7 @@ type Product = {
   maxDisplayedReviews: number;
   externalRef: string | null;
   storeId: string | null;
+  reviewGroupId: string | null;
   displayedReviewCount: number;
 };
 
@@ -190,6 +191,26 @@ export default function ProductsPage() {
     }
   }
 
+  async function updateReviewGroupId(product: Product, rawValue: string) {
+    const reviewGroupId = rawValue.trim() ? rawValue.trim() : null;
+    if (reviewGroupId === product.reviewGroupId) return;
+    setActionProductId(product.id);
+    setError(null);
+    try {
+      const res = await adminFetch(`/api/admin/products/${product.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reviewGroupId }),
+      });
+      if (!res.ok) throw new Error();
+      await load();
+    } catch {
+      setError("Ürün serisi güncellenemedi.");
+    } finally {
+      setActionProductId(null);
+    }
+  }
+
   function widgetSnippet(product: Product): string {
     const apiBaseUrl = typeof window !== "undefined" ? window.location.origin : "";
     const storeIdAttr = product.storeId ? ` data-store-id="${product.storeId}"` : "";
@@ -322,6 +343,7 @@ export default function ProductsPage() {
                 <th>Sitede gösterilecek yorum</th>
                 <th>Site stok kodu</th>
                 <th>Mağaza etiketi</th>
+                <th>Ürün serisi</th>
                 <th>Son tarama</th>
                 <th aria-label="işlemler"></th>
               </tr>
@@ -424,6 +446,18 @@ export default function ProductsPage() {
                       disabled={actionProductId === p.id}
                     />
                   </td>
+                  <td>
+                    <input
+                      type="text"
+                      className="input"
+                      style={{ height: 32, fontSize: 13, padding: "0 8px", width: 130 }}
+                      defaultValue={p.reviewGroupId ?? ""}
+                      placeholder="örn. capella-tv-unitesi"
+                      title="Aynı değeri paylaşan ürünlerin yorumları birlikte (havuzlanmış) gösterilir — farklı boy/beden varyantları için kullanın."
+                      onBlur={(e) => updateReviewGroupId(p, e.target.value)}
+                      disabled={actionProductId === p.id}
+                    />
+                  </td>
                   <td style={{ color: "var(--text-muted)" }}>{formatDate(p.lastScrapedAt)}</td>
                   <td>
                     <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
@@ -447,7 +481,7 @@ export default function ProductsPage() {
                 </tr>
                 {widgetCodeProductId === p.id && (
                   <tr>
-                    <td colSpan={9} style={{ background: "var(--surface-muted)" }}>
+                    <td colSpan={10} style={{ background: "var(--surface-muted)" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                         <code
                           style={{
