@@ -268,6 +268,98 @@ describe("renderReviewWidget", () => {
     expect(container.style.getPropertyValue("--ty-accent")).toBe("");
   });
 
+  it("hides the filter controls when hideFilters is set, but keeps pagination", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.includes("/summary")) {
+          return Promise.resolve(new Response(JSON.stringify({ averageRating: 4.0, totalReviews: 1 })));
+        }
+        return Promise.resolve(
+          new Response(JSON.stringify({ data: [], pagination: { page: 1, pageSize: 20, total: 0 } }))
+        );
+      })
+    );
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    await renderReviewWidget(container, {
+      apiBaseUrl: "http://localhost",
+      productId: "prod-1",
+      hideFilters: true,
+    });
+
+    expect(container.shadowRoot!.querySelector(".ty-widget__filters")).toBeNull();
+    expect(container.shadowRoot!.querySelector('[data-action="next"]')).not.toBeNull();
+  });
+
+  it("shows filter controls by default (hideFilters omitted)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.includes("/summary")) {
+          return Promise.resolve(new Response(JSON.stringify({ averageRating: 4.0, totalReviews: 1 })));
+        }
+        return Promise.resolve(
+          new Response(JSON.stringify({ data: [], pagination: { page: 1, pageSize: 20, total: 0 } }))
+        );
+      })
+    );
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    await renderReviewWidget(container, { apiBaseUrl: "http://localhost", productId: "prod-1" });
+
+    expect(container.shadowRoot!.querySelector(".ty-widget__filters")).not.toBeNull();
+  });
+
+  it("renders a link to the Trendyol store page when storeUrl is provided", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.includes("/summary")) {
+          return Promise.resolve(new Response(JSON.stringify({ averageRating: 4.0, totalReviews: 1 })));
+        }
+        return Promise.resolve(
+          new Response(JSON.stringify({ data: [], pagination: { page: 1, pageSize: 20, total: 0 } }))
+        );
+      })
+    );
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    await renderReviewWidget(container, {
+      apiBaseUrl: "http://localhost",
+      productId: "prod-1",
+      storeUrl: "https://www.trendyol.com/enwood-x-b171291",
+    });
+
+    const link = container.shadowRoot!.querySelector<HTMLAnchorElement>(".ty-widget__store-link");
+    expect(link).not.toBeNull();
+    expect(link!.href).toBe("https://www.trendyol.com/enwood-x-b171291");
+    expect(link!.target).toBe("_blank");
+  });
+
+  it("omits the store link when storeUrl is not provided", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.includes("/summary")) {
+          return Promise.resolve(new Response(JSON.stringify({ averageRating: 4.0, totalReviews: 1 })));
+        }
+        return Promise.resolve(
+          new Response(JSON.stringify({ data: [], pagination: { page: 1, pageSize: 20, total: 0 } }))
+        );
+      })
+    );
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    await renderReviewWidget(container, { apiBaseUrl: "http://localhost", productId: "prod-1" });
+
+    expect(container.shadowRoot!.querySelector(".ty-widget__store-link")).toBeNull();
+  });
+
   it("renders filter controls (star checkboxes, date range, photo toggle, search, sort, pagination)", async () => {
     vi.stubGlobal(
       "fetch",

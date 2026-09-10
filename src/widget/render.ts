@@ -1,4 +1,10 @@
-type WidgetOptions = { apiBaseUrl: string; productId: string; accentColor?: string };
+type WidgetOptions = {
+  apiBaseUrl: string;
+  productId: string;
+  accentColor?: string;
+  hideFilters?: boolean;
+  storeUrl?: string;
+};
 
 type Summary = {
   averageRating: number;
@@ -51,6 +57,9 @@ function injectStylesOnce(root: ShadowRoot) {
     .ty-widget__title { font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
       color: var(--ty-accent, #ff9500); margin: 0 0 10px; }
     .ty-widget__summary { font-size: 18px; font-weight: 600; margin-bottom: 12px; }
+    .ty-widget__store-link { display: inline-block; font-size: 13px; color: var(--ty-accent, #ff9500);
+      text-decoration: none; margin-bottom: 12px; }
+    .ty-widget__store-link:hover { text-decoration: underline; }
     .ty-widget__rating-distribution { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
     .ty-widget__rating-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #444; }
     .ty-widget__rating-row-label { width: 24px; }
@@ -114,16 +123,17 @@ function renderRatingDistribution(summary: Summary): string {
   return `<div class="ty-widget__rating-distribution">${rows}</div>`;
 }
 
-function renderShell(summary: Summary): string {
+function renderShell(
+  summary: Summary,
+  shellOptions: { hideFilters?: boolean; storeUrl?: string }
+): string {
   const starOptions = [5, 4, 3, 2, 1]
     .map((s) => `<label><input type="checkbox" data-star="${s}"> ${s}★</label>`)
     .join("");
 
-  return `
-    <div class="ty-widget">
-      <div class="ty-widget__title">Trendyol Yorumları</div>
-      <div class="ty-widget__summary">Ortalama Puan: ${summary.averageRating.toFixed(1)} (${summary.totalReviews} yorum)</div>
-      ${renderRatingDistribution(summary)}
+  const filters = shellOptions.hideFilters
+    ? ""
+    : `
       <div class="ty-widget__filters">
         <fieldset class="ty-widget__stars">${starOptions}</fieldset>
         <label>Başlangıç <input type="date" data-field="dateFrom"></label>
@@ -136,7 +146,19 @@ function renderShell(summary: Summary): string {
           <option value="mostHelpful">En Faydalı</option>
           <option value="longest">En Uzun</option>
         </select>
-      </div>
+      </div>`;
+
+  const storeLink = shellOptions.storeUrl
+    ? `<a class="ty-widget__store-link" href="${escapeHtml(shellOptions.storeUrl)}" target="_blank" rel="noreferrer">Trendyol mağazamızı görüntüleyin ↗</a>`
+    : "";
+
+  return `
+    <div class="ty-widget">
+      <div class="ty-widget__title">Trendyol Yorumları</div>
+      <div class="ty-widget__summary">Ortalama Puan: ${summary.averageRating.toFixed(1)} (${summary.totalReviews} yorum)</div>
+      ${renderRatingDistribution(summary)}
+      ${storeLink}
+      ${filters}
       <ul class="ty-widget__list" data-role="list"></ul>
       <div class="ty-widget__pagination">
         <button type="button" data-action="prev">‹ Önceki</button>
@@ -168,7 +190,7 @@ function renderReviewItems(reviews: ReviewItem[]): string {
 }
 
 export async function renderReviewWidget(container: HTMLElement, options: WidgetOptions) {
-  const { apiBaseUrl, productId, accentColor } = options;
+  const { apiBaseUrl, productId, accentColor, hideFilters, storeUrl } = options;
   const encodedProductId = encodeURIComponent(productId);
   // Shadow DOM içindeki stiller CSS custom property'lerini host elemandan miras alır —
   // bu sayede her müşteri kendi marka rengini widget'ı değiştirmeden verebilir.
@@ -206,7 +228,7 @@ export async function renderReviewWidget(container: HTMLElement, options: Widget
     return;
   }
 
-  root.innerHTML = renderShell(summary);
+  root.innerHTML = renderShell(summary, { hideFilters, storeUrl });
   injectStylesOnce(root);
 
   const listEl = root.querySelector<HTMLUListElement>('[data-role="list"]')!;
@@ -244,26 +266,26 @@ export async function renderReviewWidget(container: HTMLElement, options: Widget
     });
   });
 
-  root.querySelector<HTMLInputElement>('[data-field="dateFrom"]')!.addEventListener("change", (e) => {
+  root.querySelector<HTMLInputElement>('[data-field="dateFrom"]')?.addEventListener("change", (e) => {
     state.dateFrom = (e.target as HTMLInputElement).value;
     state.page = 1;
     void loadReviews();
   });
 
-  root.querySelector<HTMLInputElement>('[data-field="dateTo"]')!.addEventListener("change", (e) => {
+  root.querySelector<HTMLInputElement>('[data-field="dateTo"]')?.addEventListener("change", (e) => {
     state.dateTo = (e.target as HTMLInputElement).value;
     state.page = 1;
     void loadReviews();
   });
 
-  root.querySelector<HTMLInputElement>('[data-field="hasPhoto"]')!.addEventListener("change", (e) => {
+  root.querySelector<HTMLInputElement>('[data-field="hasPhoto"]')?.addEventListener("change", (e) => {
     state.hasPhoto = (e.target as HTMLInputElement).checked;
     state.page = 1;
     void loadReviews();
   });
 
   let searchDebounceHandle: ReturnType<typeof setTimeout> | undefined;
-  root.querySelector<HTMLInputElement>('[data-field="q"]')!.addEventListener("input", (e) => {
+  root.querySelector<HTMLInputElement>('[data-field="q"]')?.addEventListener("input", (e) => {
     const value = (e.target as HTMLInputElement).value;
     if (searchDebounceHandle) clearTimeout(searchDebounceHandle);
     searchDebounceHandle = setTimeout(() => {
@@ -273,7 +295,7 @@ export async function renderReviewWidget(container: HTMLElement, options: Widget
     }, 400);
   });
 
-  root.querySelector<HTMLSelectElement>('[data-field="sort"]')!.addEventListener("change", (e) => {
+  root.querySelector<HTMLSelectElement>('[data-field="sort"]')?.addEventListener("change", (e) => {
     state.sort = (e.target as HTMLSelectElement).value as SortValue;
     state.page = 1;
     void loadReviews();

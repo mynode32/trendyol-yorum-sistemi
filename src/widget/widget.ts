@@ -21,7 +21,13 @@ function init() {
   container.id = `ty-widget-${productId}`;
   scriptTag?.insertAdjacentElement("afterend", container);
 
-  renderReviewWidget(container, { apiBaseUrl, productId, accentColor: scriptTag?.dataset.accentColor });
+  renderReviewWidget(container, {
+    apiBaseUrl,
+    productId,
+    accentColor: scriptTag?.dataset.accentColor,
+    hideFilters: scriptTag?.dataset.hideFilters === "true",
+    storeUrl: scriptTag?.dataset.storeUrl,
+  });
 }
 
 init();
