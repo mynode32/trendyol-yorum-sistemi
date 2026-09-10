@@ -412,6 +412,34 @@ describe("renderReviewWidget", () => {
     expect(container.shadowRoot!.querySelector(".ty-widget__rating-distribution")).not.toBeNull();
   });
 
+  it("renders filled and empty star icons matching the review's rating", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.includes("/summary")) {
+          return Promise.resolve(new Response(JSON.stringify({ averageRating: 3, totalReviews: 1 })));
+        }
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [{ id: "1", rating: 3, comment: "Fena değil", authorName: "A", hasPhoto: false, reviewDate: "2026-01-01" }],
+              pagination: { page: 1, pageSize: 20, total: 1 },
+            })
+          )
+        );
+      })
+    );
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    await renderReviewWidget(container, { apiBaseUrl: "http://localhost", productId: "prod-1" });
+
+    const filled = container.shadowRoot!.querySelector(".ty-widget__item-stars-filled");
+    const empty = container.shadowRoot!.querySelector(".ty-widget__item-stars-empty");
+    expect(filled?.textContent).toBe("★★★");
+    expect(empty?.textContent).toBe("☆☆");
+  });
+
   it("duplicates review cards inside a scrolling track when carousel is enabled", async () => {
     vi.stubGlobal(
       "fetch",

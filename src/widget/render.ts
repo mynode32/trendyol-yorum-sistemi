@@ -79,15 +79,22 @@ function injectStylesOnce(root: ShadowRoot) {
     .ty-widget__filters input[type="date"] { padding: 3px 6px; border: 1px solid #ccc; border-radius: 4px; }
     .ty-widget__filters select { padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; }
     .ty-widget__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; min-height: 40px; }
-    .ty-widget__list--carousel { overflow: hidden; padding-bottom: 4px; }
-    .ty-widget__carousel-track { display: flex; gap: 12px; width: max-content;
+    .ty-widget__list--carousel { overflow: hidden; padding: 6px 0 10px;
+      -webkit-mask-image: linear-gradient(to right, transparent, black 32px, black calc(100% - 32px), transparent);
+      mask-image: linear-gradient(to right, transparent, black 32px, black calc(100% - 32px), transparent); }
+    .ty-widget__carousel-track { display: flex; gap: 14px; width: max-content;
       animation: ty-widget-scroll 32s linear infinite; }
     .ty-widget__list--carousel:hover .ty-widget__carousel-track,
     .ty-widget__list--carousel:focus-within .ty-widget__carousel-track { animation-play-state: paused; }
     @keyframes ty-widget-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-    .ty-widget__list--carousel .ty-widget__item { flex: 0 0 260px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    .ty-widget__list--carousel .ty-widget__item { flex: 0 0 260px; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      padding: 14px 16px; transition: transform 0.18s ease, box-shadow 0.18s ease; }
+    .ty-widget__list--carousel .ty-widget__item:hover { transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.14); }
     .ty-widget__item { border: 1px solid #e5e5e5; border-radius: 8px; padding: 10px 12px; }
-    .ty-widget__item-rating { color: #ff9500; font-weight: 700; margin-right: 6px; }
+    .ty-widget__item-stars { display: inline-block; margin-right: 6px; letter-spacing: 1px; }
+    .ty-widget__item-stars-filled { color: #ff9500; }
+    .ty-widget__item-stars-empty { color: #ddd; }
     .ty-widget__item-author { font-weight: 600; }
     .ty-widget__empty, .ty-widget__error { padding: 12px; color: #666; font-style: italic; }
     .ty-widget__pagination { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 13px; }
@@ -193,6 +200,14 @@ function renderShell(
   `;
 }
 
+function renderStars(rating: number): string {
+  const filled = Math.max(0, Math.min(5, Math.round(rating)));
+  const empty = 5 - filled;
+  return `<span class="ty-widget__item-stars">
+    <span class="ty-widget__item-stars-filled">${"★".repeat(filled)}</span><span class="ty-widget__item-stars-empty">${"☆".repeat(empty)}</span>
+  </span>`;
+}
+
 function renderReviewItemsHtml(reviews: ReviewItem[]): string {
   return reviews
     .map((r) => {
@@ -201,7 +216,7 @@ function renderReviewItemsHtml(reviews: ReviewItem[]): string {
         .join("");
       return `
         <li class="ty-widget__item">
-          <span class="ty-widget__item-rating">${escapeHtml(String(r.rating))}★</span>
+          ${renderStars(r.rating)}
           <span class="ty-widget__item-author">${escapeHtml(r.authorName)}:</span>
           ${escapeHtml(r.comment)}
           ${photos ? `<div class="ty-widget__item-photos">${photos}</div>` : ""}
