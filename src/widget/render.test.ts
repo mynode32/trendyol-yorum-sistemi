@@ -360,6 +360,58 @@ describe("renderReviewWidget", () => {
     expect(container.shadowRoot!.querySelector(".ty-widget__store-link")).toBeNull();
   });
 
+  it("hides the average rating and star-distribution bars when hideSummary is set", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.includes("/summary")) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({ averageRating: 4.3, totalReviews: 4, ratingCounts: { "1": 0, "2": 1, "3": 0, "4": 0, "5": 3 } })
+            )
+          );
+        }
+        return Promise.resolve(
+          new Response(JSON.stringify({ data: [], pagination: { page: 1, pageSize: 20, total: 0 } }))
+        );
+      })
+    );
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    await renderReviewWidget(container, { apiBaseUrl: "http://localhost", productId: "prod-1", hideSummary: true });
+
+    expect(container.shadowRoot!.querySelector(".ty-widget__summary")).toBeNull();
+    expect(container.shadowRoot!.querySelector(".ty-widget__rating-distribution")).toBeNull();
+    // Başlık ve mağaza linki gibi diğer bölümler etkilenmemeli.
+    expect(container.shadowRoot!.querySelector(".ty-widget__title")?.textContent).toBe("Trendyol Yorumları");
+  });
+
+  it("shows the average rating and star-distribution bars by default", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.includes("/summary")) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({ averageRating: 4.3, totalReviews: 4, ratingCounts: { "1": 0, "2": 1, "3": 0, "4": 0, "5": 3 } })
+            )
+          );
+        }
+        return Promise.resolve(
+          new Response(JSON.stringify({ data: [], pagination: { page: 1, pageSize: 20, total: 0 } }))
+        );
+      })
+    );
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    await renderReviewWidget(container, { apiBaseUrl: "http://localhost", productId: "prod-1" });
+
+    expect(container.shadowRoot!.querySelector(".ty-widget__summary")).not.toBeNull();
+    expect(container.shadowRoot!.querySelector(".ty-widget__rating-distribution")).not.toBeNull();
+  });
+
   it("duplicates review cards inside a scrolling track when carousel is enabled", async () => {
     vi.stubGlobal(
       "fetch",

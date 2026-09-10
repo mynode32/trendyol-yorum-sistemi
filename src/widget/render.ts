@@ -5,6 +5,7 @@ type WidgetOptions = {
   hideFilters?: boolean;
   storeUrl?: string;
   carousel?: boolean;
+  hideSummary?: boolean;
 };
 
 type Summary = {
@@ -54,7 +55,8 @@ function injectStylesOnce(root: ShadowRoot) {
   const style = document.createElement("style");
   style.id = STYLE_TAG_ID;
   style.textContent = `
-    .ty-widget { font-family: system-ui, sans-serif; max-width: 640px; color: #1a1a1a; }
+    .ty-widget { font-family: system-ui, sans-serif; width: 100%; box-sizing: border-box; color: #1a1a1a; }
+    .ty-widget *, .ty-widget *::before, .ty-widget *::after { box-sizing: border-box; }
     .ty-widget__title { font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
       color: var(--ty-accent, #ff9500); margin: 0 0 10px; }
     .ty-widget__summary { font-size: 18px; font-weight: 600; margin-bottom: 12px; }
@@ -133,7 +135,7 @@ function renderRatingDistribution(summary: Summary): string {
 
 function renderShell(
   summary: Summary,
-  shellOptions: { hideFilters?: boolean; storeUrl?: string; carousel?: boolean }
+  shellOptions: { hideFilters?: boolean; storeUrl?: string; carousel?: boolean; hideSummary?: boolean }
 ): string {
   const starOptions = [5, 4, 3, 2, 1]
     .map((s) => `<label><input type="checkbox" data-star="${s}"> ${s}★</label>`)
@@ -173,11 +175,16 @@ function renderShell(
         <button type="button" data-action="next">Sonraki ›</button>
       </div>`;
 
+  const summarySection = shellOptions.hideSummary
+    ? ""
+    : `
+      <div class="ty-widget__summary">Ortalama Puan: ${summary.averageRating.toFixed(1)} (${summary.totalReviews} yorum)</div>
+      ${renderRatingDistribution(summary)}`;
+
   return `
     <div class="ty-widget">
       <div class="ty-widget__title">Trendyol Yorumları</div>
-      <div class="ty-widget__summary">Ortalama Puan: ${summary.averageRating.toFixed(1)} (${summary.totalReviews} yorum)</div>
-      ${renderRatingDistribution(summary)}
+      ${summarySection}
       ${storeLink}
       ${filters}
       <ul class="${listClass}" data-role="list"></ul>
@@ -216,7 +223,7 @@ function renderReviewItems(reviews: ReviewItem[], carousel?: boolean): string {
 }
 
 export async function renderReviewWidget(container: HTMLElement, options: WidgetOptions) {
-  const { apiBaseUrl, productId, accentColor, hideFilters, storeUrl, carousel } = options;
+  const { apiBaseUrl, productId, accentColor, hideFilters, storeUrl, carousel, hideSummary } = options;
   const encodedProductId = encodeURIComponent(productId);
   // Shadow DOM içindeki stiller CSS custom property'lerini host elemandan miras alır —
   // bu sayede her müşteri kendi marka rengini widget'ı değiştirmeden verebilir.
@@ -254,7 +261,7 @@ export async function renderReviewWidget(container: HTMLElement, options: Widget
     return;
   }
 
-  root.innerHTML = renderShell(summary, { hideFilters, storeUrl, carousel });
+  root.innerHTML = renderShell(summary, { hideFilters, storeUrl, carousel, hideSummary });
   injectStylesOnce(root);
 
   const listEl = root.querySelector<HTMLUListElement>('[data-role="list"]')!;

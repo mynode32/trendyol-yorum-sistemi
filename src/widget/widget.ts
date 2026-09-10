@@ -28,6 +28,7 @@ function init() {
     hideFilters: scriptTag?.dataset.hideFilters === "true",
     storeUrl: scriptTag?.dataset.storeUrl,
     carousel: scriptTag?.dataset.carousel === "true",
+    hideSummary: scriptTag?.dataset.hideSummary === "true",
   });
 }
 
