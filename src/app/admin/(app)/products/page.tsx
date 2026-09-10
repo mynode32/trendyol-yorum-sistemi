@@ -12,6 +12,7 @@ type Product = {
   minRating: number | null;
   maxDisplayedReviews: number;
   externalRef: string | null;
+  storeId: string | null;
 };
 
 function formatDate(value: string | null): string {
@@ -34,6 +35,10 @@ export default function ProductsPage() {
   const [error, setError] = useState<string | null>(null);
   const [widgetCodeProductId, setWidgetCodeProductId] = useState<string | null>(null);
   const [copiedProductId, setCopiedProductId] = useState<string | null>(null);
+  const [sellerUrl, setSellerUrl] = useState("");
+  const [bulkStoreId, setBulkStoreId] = useState("");
+  const [bulkImporting, setBulkImporting] = useState(false);
+  const [bulkResult, setBulkResult] = useState<string | null>(null);
 
   async function load() {
     try {
@@ -161,9 +166,30 @@ export default function ProductsPage() {
     }
   }
 
+  async function updateStoreId(product: Product, rawValue: string) {
+    const storeId = rawValue.trim() ? rawValue.trim() : null;
+    if (storeId === product.storeId) return;
+    setActionProductId(product.id);
+    setError(null);
+    try {
+      const res = await adminFetch(`/api/admin/products/${product.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storeId }),
+      });
+      if (!res.ok) throw new Error();
+      await load();
+    } catch {
+      setError("Mağaza etiketi güncellenemedi.");
+    } finally {
+      setActionProductId(null);
+    }
+  }
+
   function widgetSnippet(product: Product): string {
     const apiBaseUrl = typeof window !== "undefined" ? window.location.origin : "";
-    return `<script src="${apiBaseUrl}/widget/widget.js" data-product-id="${product.id}"></script>`;
+    const storeIdAttr = product.storeId ? ` data-store-id="${product.storeId}"` : "";
+    return `<script src="${apiBaseUrl}/widget/widget.js" data-product-id="${product.id}"${storeIdAttr}></script>`;
   }
 
   async function copyWidgetSnippet(product: Product) {
@@ -191,27 +217,34 @@ export default function ProductsPage() {
     }
   }
 
-  async function scrapeNow(product: Product) {
-    setActionProductId(product.id);
+  async function bulkImportFromSeller(e: React.FormEvent) {
+    e.preventDefault();
     setError(null);
+    setBulkResult(null);
+    setBulkImporting(true);
     try {
-      const res = await adminFetch(`/api/admin/products/${product.id}/scrape`, { method: "POST" });
+      const res = await adminFetch("/api/admin/products/bulk-import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sellerUrl,
+          ...(bulkStoreId.trim() ? { storeId: bulkStoreId.trim() } : {}),
+        }),
+      });
       const body = await res.json().catch(() => null);
       if (!res.ok) {
-        throw new Error(
-          body?.error?.message ??
-            "Tarama başarısız oldu. Bu özellik yalnızca 7/24 çalışan tarama sunucusu (worker) aktifken çalışır — worker kurulana kadar bu hata beklenen bir durumdur."
-        );
+        throw new Error(body?.error?.message ?? "Mağazadan ürünler bulunamadı.");
       }
-      await load();
-    } catch (error) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Tarama başlatılamadı. Bu özellik yalnızca 7/24 çalışan tarama sunucusu (worker) aktifken çalışır."
+      setBulkResult(
+        `${body.discovered} ürün bulundu — ${body.added} yeni eklendi, ${body.skipped} zaten ekliydi.`
       );
+      setSellerUrl("");
+      setBulkStoreId("");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Mağazadan ürünler bulunamadı.");
     } finally {
-      setActionProductId(null);
+      setBulkImporting(false);
     }
   }
 
@@ -261,7 +294,39 @@ export default function ProductsPage() {
         </button>
       </form>
 
+      <form
+        onSubmit={bulkImportFromSeller}
+        className="card"
+        style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 28 }}
+      >
+        <div className="field" style={{ flex: "1 1 240px" }}>
+          <label htmlFor="sellerUrl">Trendyol mağaza URL&apos;si (toplu ekle)</label>
+          <input
+            id="sellerUrl"
+            className="input"
+            value={sellerUrl}
+            onChange={(e) => setSellerUrl(e.target.value)}
+            placeholder="https://www.trendyol.com/magaza-adi-x-b123456"
+            required
+          />
+        </div>
+        <div className="field" style={{ flex: "0 1 160px" }}>
+          <label htmlFor="bulkStoreId">Mağaza etiketi</label>
+          <input
+            id="bulkStoreId"
+            className="input"
+            value={bulkStoreId}
+            onChange={(e) => setBulkStoreId(e.target.value)}
+            placeholder="örn. enwood"
+          />
+        </div>
+        <button type="submit" className="btn btn-primary" style={{ alignSelf: "flex-end" }} disabled={bulkImporting}>
+          {bulkImporting ? "Ürünler bulunuyor…" : "Mağazadaki Ürünleri Bul ve Ekle"}
+        </button>
+      </form>
+
       {error && <p className="alert alert-error" style={{ marginBottom: 20 }}>{error}</p>}
+      {bulkResult && <p className="alert alert-success" style={{ marginBottom: 20 }}>{bulkResult}</p>}
 
       <p
         style={{
@@ -274,8 +339,8 @@ export default function ProductsPage() {
           marginBottom: 20,
         }}
       >
-        Not: &quot;Şimdi Tara&quot; yalnızca 7/24 çalışan tarama sunucusu (worker) kurulup aktif olduğunda çalışır. Worker
-        kurulana kadar otomatik yorumlar periyodik zamanlanmış görevle çekilecektir.
+        Yorumlar bu bilgisayarda 7/24 çalışan worker tarafından her 3 saatte bir otomatik güncellenir, elle tetikleme
+        gerekmez.
       </p>
 
       {loading ? (
@@ -299,6 +364,7 @@ export default function ProductsPage() {
                 <th>Minimum puan</th>
                 <th>Sitede gösterilecek yorum</th>
                 <th>Site stok kodu</th>
+                <th>Mağaza etiketi</th>
                 <th>Son tarama</th>
                 <th aria-label="işlemler"></th>
               </tr>
@@ -307,7 +373,7 @@ export default function ProductsPage() {
               {products.map((p) => (
                 <Fragment key={p.id}>
                 <tr>
-                  <td style={{ whiteSpace: "normal" }}>
+                  <td style={{ whiteSpace: "normal", minWidth: 240, maxWidth: 320 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       {p.imageUrl && (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -319,8 +385,19 @@ export default function ProductsPage() {
                           style={{ borderRadius: "var(--radius-sm)", objectFit: "cover", flexShrink: 0 }}
                         />
                       )}
-                      <div>
-                        <div style={{ fontWeight: 500 }}>{p.name}</div>
+                      <div style={{ minWidth: 0 }}>
+                        <div
+                          title={p.name}
+                          style={{
+                            fontWeight: 500,
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {p.name}
+                        </div>
                         <a
                           href={p.trendyolUrl}
                           target="_blank"
@@ -373,6 +450,17 @@ export default function ProductsPage() {
                       disabled={actionProductId === p.id}
                     />
                   </td>
+                  <td>
+                    <input
+                      type="text"
+                      className="input"
+                      style={{ height: 32, fontSize: 13, padding: "0 8px", width: 100 }}
+                      defaultValue={p.storeId ?? ""}
+                      placeholder="örn. enwood"
+                      onBlur={(e) => updateStoreId(p, e.target.value)}
+                      disabled={actionProductId === p.id}
+                    />
+                  </td>
                   <td style={{ color: "var(--text-muted)" }}>{formatDate(p.lastScrapedAt)}</td>
                   <td>
                     <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
@@ -385,9 +473,6 @@ export default function ProductsPage() {
                       >
                         Widget kodu
                       </button>
-                      <button className="btn btn-secondary btn-sm" onClick={() => scrapeNow(p)} disabled={actionProductId === p.id}>
-                        {actionProductId === p.id ? "Taranıyor…" : "Şimdi Tara"}
-                      </button>
                       <button className="btn btn-secondary btn-sm" onClick={() => toggleTracked(p)} disabled={actionProductId === p.id}>
                         {p.isTracked ? "Durdur" : "Başlat"}
                       </button>
@@ -399,7 +484,7 @@ export default function ProductsPage() {
                 </tr>
                 {widgetCodeProductId === p.id && (
                   <tr>
-                    <td colSpan={7} style={{ background: "var(--surface-muted)" }}>
+                    <td colSpan={8} style={{ background: "var(--surface-muted)" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                         <code
                           style={{

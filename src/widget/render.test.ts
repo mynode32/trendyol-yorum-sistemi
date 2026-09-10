@@ -203,6 +203,33 @@ describe("renderReviewWidget", () => {
     expect(img!.src).toBe("https://example.com/photo1.jpg");
   });
 
+  it("passes storeId through to the resolve call when provided", async () => {
+    const fetchMock = vi.fn((url: string) => {
+      if (url.includes("/resolve")) {
+        return Promise.resolve(new Response(JSON.stringify({ id: "internal-prod-9" })));
+      }
+      if (url.includes("/summary")) {
+        return Promise.resolve(new Response(JSON.stringify({ averageRating: 4.0, totalReviews: 1 })));
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({ data: [], pagination: { page: 1, pageSize: 20, total: 0 } }))
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    await renderReviewWidget(container, {
+      apiBaseUrl: "http://localhost",
+      externalRef: "SKU-42",
+      storeId: "enwood",
+    });
+
+    const resolveUrl = fetchMock.mock.calls.map((c) => c[0] as string).find((u) => u.includes("/resolve"));
+    expect(resolveUrl).toContain("ref=SKU-42");
+    expect(resolveUrl).toContain("storeId=enwood");
+  });
+
   it("resolves productId via externalRef when productId is not directly provided", async () => {
     const fetchMock = vi.fn((url: string) => {
       if (url.includes("/resolve")) {

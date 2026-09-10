@@ -7,6 +7,9 @@ function init() {
   // gibi bir şablon değişkeni ile doldurulur). Tek bir site-geneli script her
   // ürün sayfasında doğru ürünü bulabilsin diye productId'ye alternatif olarak kullanılır.
   const externalRef = scriptTag?.dataset.externalRef;
+  // storeId: müşteriye özel sabit bir etiket (örn. "enwood") — script yanlışlıkla
+  // başka bir müşterinin sitesine yapıştırılırsa /resolve eşleşmeyi reddeder.
+  const storeId = scriptTag?.dataset.storeId;
   // Varsayılan API kökü, script'in kendi src'sinden türetilir — widget üçüncü taraf
   // bir sitede çalıştığında host sayfanın origin'i API'nin origin'i değildir.
   // data-api-base-url verilirse o kazanır.
@@ -29,6 +32,7 @@ function init() {
     apiBaseUrl,
     productId,
     externalRef,
+    storeId,
     accentColor: scriptTag?.dataset.accentColor,
     hideFilters: scriptTag?.dataset.hideFilters === "true",
     storeUrl: scriptTag?.dataset.storeUrl,

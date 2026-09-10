@@ -279,6 +279,11 @@ button {
   color: var(--danger);
 }
 
+.alert-success {
+  background: var(--success-tint);
+  color: var(--success);
+}
+
 /* ---------- badges ---------- */
 
 .badge {

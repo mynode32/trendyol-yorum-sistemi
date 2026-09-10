@@ -31,6 +31,11 @@ model Product {
   // şablon değişkeniyle alıp /resolve endpoint'i üzerinden doğru ürünü bulur —
   // her ürün için ayrı script yazmaya gerek kalmaz.
   externalRef       String?     @unique
+  // Hangi müşteri sitesine ait olduğunu belirten basit bir etiket (örn. "enwood").
+  // /resolve, externalRef zaten benzersiz olsa da, script'in YANLIŞ siteye
+  // yapıştırılması durumunda başka bir müşterinin yorumunun sızmasını engellemek
+  // için storeId'nin de eşleşmesini zorunlu kılar.
+  storeId           String?
   lastScrapedAt     DateTime?
   createdAt         DateTime    @default(now())
   reviews           Review[]

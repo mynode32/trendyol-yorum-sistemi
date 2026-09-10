@@ -11,16 +11,18 @@ const patchBodySchema = z
     minRating: z.number().int().min(1).max(5).nullable().optional(),
     maxDisplayedReviews: z.number().int().min(1).max(500).optional(),
     externalRef: z.string().trim().min(1).max(200).nullable().optional(),
+    storeId: z.string().trim().min(1).max(100).nullable().optional(),
   })
   .refine(
     (data) =>
       data.isTracked !== undefined ||
       data.minRating !== undefined ||
       data.maxDisplayedReviews !== undefined ||
-      data.externalRef !== undefined,
+      data.externalRef !== undefined ||
+      data.storeId !== undefined,
     {
       message:
-        "isTracked, minRating, maxDisplayedReviews veya externalRef alanlarından en az biri gönderilmeli",
+        "isTracked, minRating, maxDisplayedReviews, externalRef veya storeId alanlarından en az biri gönderilmeli",
     }
   );
 
@@ -45,7 +47,7 @@ export async function PATCH(
       400
     );
   }
-  const { isTracked, minRating, maxDisplayedReviews, externalRef } = parsed.data;
+  const { isTracked, minRating, maxDisplayedReviews, externalRef, storeId } = parsed.data;
 
   try {
     const product = await prisma.product.update({
@@ -55,6 +57,7 @@ export async function PATCH(
         ...(minRating !== undefined ? { minRating } : {}),
         ...(maxDisplayedReviews !== undefined ? { maxDisplayedReviews } : {}),
         ...(externalRef !== undefined ? { externalRef } : {}),
+        ...(storeId !== undefined ? { storeId } : {}),
       },
     });
     // Vitrin boyutu değiştiyse yeni sınıra göre hemen yeniden hesapla.

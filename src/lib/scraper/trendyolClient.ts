@@ -71,6 +71,14 @@ export async function fetchAllReviewsWithFetcher(
   return allReviews;
 }
 
+/** Bir mağaza sayfasından toplanan href'lerden benzersiz Trendyol ürün ID'lerini çıkarır. */
+export function extractProductIdsFromHrefs(hrefs: string[]): string[] {
+  const ids = hrefs
+    .map((href) => href.match(/-p-(\d+)/)?.[1])
+    .filter((id): id is string => Boolean(id));
+  return [...new Set(ids)];
+}
+
 export type ProductInfo = { name: string | null; imageUrl: string | null };
 
 /** Ürün sayfasının og:title/og:image meta etiketlerinden gerçek ad ve görseli çeker. */
@@ -88,6 +96,45 @@ export async function fetchProductInfo(trendyolUrl: string): Promise<ProductInfo
       name: document.querySelector('meta[property="og:title"]')?.getAttribute("content") ?? null,
       imageUrl: document.querySelector('meta[property="og:image"]')?.getAttribute("content") ?? null,
     }));
+  } finally {
+    await browser.close();
+  }
+}
+
+const DISCOVERY_MAX_SCROLLS = 40;
+const DISCOVERY_STABLE_ROUNDS = 3;
+
+/**
+ * Bir Trendyol mağaza sayfasını (örn. trendyol.com/enwood-x-b171291) sonuna kadar
+ * kaydırarak sayfadaki tüm ürün linklerini toplar. Mağaza sayfaları infinite-scroll
+ * ile yeni ürün yüklüyor; art arda birkaç kaydırmada yeni ürün gelmeyince durur.
+ */
+export async function discoverSellerProductIds(sellerUrl: string): Promise<string[]> {
+  const browser = await chromium.launch({ headless: false });
+  try {
+    const context = await browser.newContext({ locale: "tr-TR" });
+    const page = await context.newPage();
+    await page.goto(sellerUrl, { waitUntil: "domcontentloaded" });
+
+    let stableRounds = 0;
+    let lastCount = 0;
+    for (let i = 0; i < DISCOVERY_MAX_SCROLLS && stableRounds < DISCOVERY_STABLE_ROUNDS; i++) {
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+
+      const currentCount: number = await page.evaluate(
+        () => document.querySelectorAll('a[href*="-p-"]').length
+      );
+      stableRounds = currentCount === lastCount ? stableRounds + 1 : 0;
+      lastCount = currentCount;
+    }
+
+    const hrefs: string[] = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('a[href*="-p-"]')).map(
+        (a) => a.getAttribute("href") ?? ""
+      )
+    );
+    return extractProductIdsFromHrefs(hrefs);
   } finally {
     await browser.close();
   }

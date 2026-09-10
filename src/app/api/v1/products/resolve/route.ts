@@ -13,13 +13,18 @@ export function OPTIONS() {
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const ref = url.searchParams.get("ref");
+  const storeId = url.searchParams.get("storeId");
 
   if (!ref) {
     return jsonError("INVALID_QUERY", "ref parametresi zorunlu", 400, CORS_HEADERS);
   }
 
   const product = await prisma.product.findUnique({ where: { externalRef: ref } });
-  if (!product) {
+  // externalRef zaten benzersiz olduğu için tek başına asla yanlış ürünü döndürmez;
+  // ama ürünün kendi storeId'si ayarlanmışsa, isteğin storeId'sinin de eşleşmesini
+  // zorunlu kılıyoruz — script'in yanlış müşterinin sitesine yapıştırılması gibi bir
+  // operatör hatasında başka bir mağazanın yorumunun sızmasını engeller.
+  if (!product || (product.storeId && product.storeId !== storeId)) {
     return jsonError("PRODUCT_NOT_FOUND", "Bu koda eşleşen ürün bulunamadı", 404, CORS_HEADERS);
   }
 

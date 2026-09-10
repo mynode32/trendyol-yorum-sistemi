@@ -6,6 +6,9 @@ type WidgetOptions = {
   // site-geneli script tag'i her ürün sayfasında doğru ürünü bulabilir.
   productId?: string;
   externalRef?: string;
+  // externalRef ile birlikte kullanılır — /resolve'a iletilir, ürünün storeId'si
+  // ile eşleşmezse (yanlış siteye yapıştırılmış script gibi bir hata) sonuç boş döner.
+  storeId?: string;
   accentColor?: string;
   hideFilters?: boolean;
   storeUrl?: string;
@@ -243,7 +246,7 @@ function renderReviewItems(reviews: ReviewItem[], carousel?: boolean): string {
 }
 
 export async function renderReviewWidget(container: HTMLElement, options: WidgetOptions) {
-  const { apiBaseUrl, accentColor, hideFilters, storeUrl, carousel, hideSummary, externalRef } = options;
+  const { apiBaseUrl, accentColor, hideFilters, storeUrl, carousel, hideSummary, externalRef, storeId } = options;
   // Shadow DOM içindeki stiller CSS custom property'lerini host elemandan miras alır —
   // bu sayede her müşteri kendi marka rengini widget'ı değiştirmeden verebilir.
   if (accentColor) container.style.setProperty("--ty-accent", accentColor);
@@ -256,7 +259,10 @@ export async function renderReviewWidget(container: HTMLElement, options: Widget
   let productId = options.productId;
   if (!productId && externalRef) {
     try {
-      const resolveRes = await fetch(`${apiBaseUrl}/api/v1/products/resolve?ref=${encodeURIComponent(externalRef)}`);
+      const storeIdQuery = storeId ? `&storeId=${encodeURIComponent(storeId)}` : "";
+      const resolveRes = await fetch(
+        `${apiBaseUrl}/api/v1/products/resolve?ref=${encodeURIComponent(externalRef)}${storeIdQuery}`
+      );
       if (resolveRes.ok) {
         productId = (await resolveRes.json()).id;
       }

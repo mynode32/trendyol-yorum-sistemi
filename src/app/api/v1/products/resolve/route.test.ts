@@ -37,6 +37,34 @@ describe("GET /api/v1/products/resolve", () => {
     expect(body.error.code).toBe("PRODUCT_NOT_FOUND");
   });
 
+  it("resolves when storeId is provided and matches the product's storeId", async () => {
+    const product = await prisma.product.create({
+      data: { trendyolProductId: "p-2", trendyolUrl: "https://x", name: "Ürün", externalRef: "SKU-456", storeId: "enwood" },
+    });
+
+    const response = await GET(
+      makeRequest("http://localhost/api/v1/products/resolve?ref=SKU-456&storeId=enwood")
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ id: product.id });
+  });
+
+  it("returns 404 when storeId is provided but does not match the product's storeId (cross-store leak prevention)", async () => {
+    await prisma.product.create({
+      data: { trendyolProductId: "p-3", trendyolUrl: "https://x", name: "Ürün", externalRef: "SKU-789", storeId: "enwood" },
+    });
+
+    const response = await GET(
+      makeRequest("http://localhost/api/v1/products/resolve?ref=SKU-789&storeId=sedefira")
+    );
+
+    expect(response.status).toBe(404);
+    const body = await response.json();
+    expect(body.error.code).toBe("PRODUCT_NOT_FOUND");
+  });
+
   it("returns 400 when the ref query param is missing", async () => {
     const response = await GET(makeRequest("http://localhost/api/v1/products/resolve"));
 

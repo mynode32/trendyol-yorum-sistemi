@@ -1,5 +1,23 @@
 import { describe, it, expect, vi } from "vitest";
-import { fetchAllReviewsWithFetcher } from "./trendyolClient";
+import { fetchAllReviewsWithFetcher, extractProductIdsFromHrefs } from "./trendyolClient";
+
+describe("extractProductIdsFromHrefs", () => {
+  it("extracts and dedupes product ids from a mixed list of hrefs", () => {
+    const hrefs = [
+      "/enwood/capella-tv-unitesi-p-903006866",
+      "/enwood/capella-tv-unitesi-p-903006866?boutiqueId=61",
+      "/enwood/mila-tv-unitesi-p-887714415",
+      "/kategori/tv-sehpa-unitesi",
+      "#",
+    ];
+
+    expect(extractProductIdsFromHrefs(hrefs)).toEqual(["903006866", "887714415"]);
+  });
+
+  it("returns an empty array when no href contains a product id", () => {
+    expect(extractProductIdsFromHrefs(["/kategori/x", "/marka/enwood"])).toEqual([]);
+  });
+});
 
 describe("fetchAllReviewsWithFetcher", () => {
   it("paginates using result.summary.totalPages, then stops (real last page is not empty)", async () => {
