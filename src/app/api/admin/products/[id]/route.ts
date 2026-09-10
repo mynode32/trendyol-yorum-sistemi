@@ -67,11 +67,15 @@ export async function PATCH(
     if (maxDisplayedReviews !== undefined) await syncDisplayedReviews(id);
     return NextResponse.json(product);
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      return jsonError("CONFLICT", "Bu externalRef başka bir ürün tarafından kullanılıyor", 409);
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2002") {
+        return jsonError("CONFLICT", "Bu externalRef başka bir ürün tarafından kullanılıyor", 409);
+      }
+      if (error.code === "P2025") {
+        return jsonError("NOT_FOUND", "Ürün bulunamadı", 404);
+      }
     }
-    // Prisma bilinmeyen id için P2025 fırlatır; 500 yerine 404 dönüyoruz.
-    return jsonError("NOT_FOUND", "Ürün bulunamadı", 404);
+    throw error;
   }
 }
 
@@ -88,8 +92,10 @@ export async function DELETE(
       prisma.product.delete({ where: { id } }),
     ]);
     return NextResponse.json({ ok: true });
-  } catch {
-    // Prisma bilinmeyen id için P2025 fırlatır; 500 yerine 404 dönüyoruz.
-    return jsonError("NOT_FOUND", "Ürün bulunamadı", 404);
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return jsonError("NOT_FOUND", "Ürün bulunamadı", 404);
+    }
+    throw error;
   }
 }

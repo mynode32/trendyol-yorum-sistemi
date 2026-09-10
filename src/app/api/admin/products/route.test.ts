@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterAll } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
 import { prisma } from "@/lib/db";
 import { GET, POST } from "./route";
 import { PATCH, DELETE } from "./[id]/route";
@@ -98,6 +98,18 @@ describe("/api/admin/products", () => {
         trendyolUrl: "https://www.trendyol.com/marka/urun-adi-p-987654321",
         minRating: 6,
       }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error.code).toBe("INVALID_BODY");
+  });
+
+  it("returns 400 INVALID_BODY instead of 500 for malformed JSON", async () => {
+    const request = new Request("http://localhost/api/admin/products", {
+      method: "POST",
+      body: "{not valid json",
     });
 
     const response = await POST(request);
@@ -279,6 +291,26 @@ describe("/api/admin/products", () => {
     expect(response.status).toBe(404);
     const body = await response.json();
     expect(body.error.code).toBe("NOT_FOUND");
+  });
+
+  it("does not misreport an unrelated DB error as 404 NOT_FOUND", async () => {
+    const product = await prisma.product.create({
+      data: { trendyolProductId: "p1", trendyolUrl: "https://x", name: "Ürün" },
+    });
+    const updateSpy = vi
+      .spyOn(prisma.product, "update")
+      .mockRejectedValueOnce(new Error("bağlantı koptu"));
+
+    const request = new Request(`http://localhost/api/admin/products/${product.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ isTracked: false }),
+    });
+
+    await expect(PATCH(request, { params: Promise.resolve({ id: product.id }) })).rejects.toThrow(
+      "bağlantı koptu"
+    );
+
+    updateSpy.mockRestore();
   });
 
   it("deletes a product along with its reviews and scrape logs", async () => {

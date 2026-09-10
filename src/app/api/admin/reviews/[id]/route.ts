@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/api/errors";
@@ -34,8 +35,10 @@ export async function PATCH(
     // gizlenince sıradaki uygun yorum onun yerini almalı.
     await syncDisplayedReviews(review.productId);
     return NextResponse.json(review);
-  } catch {
-    // Prisma bilinmeyen id için P2025 fırlatır; 500 yerine 404 dönüyoruz.
-    return jsonError("NOT_FOUND", "Yorum bulunamadı", 404);
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return jsonError("NOT_FOUND", "Yorum bulunamadı", 404);
+    }
+    throw error;
   }
 }

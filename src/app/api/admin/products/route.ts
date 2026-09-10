@@ -33,9 +33,18 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const { trendyolUrl, minRating: rawMinRating } = await request.json();
+  let rawBody: unknown;
+  try {
+    rawBody = await request.json();
+  } catch {
+    return jsonError("INVALID_BODY", "Geçersiz JSON gövdesi", 400);
+  }
+  const { trendyolUrl, minRating: rawMinRating } = rawBody as {
+    trendyolUrl?: unknown;
+    minRating?: unknown;
+  };
 
-  if (!trendyolUrl || !isTrendyolUrl(trendyolUrl)) {
+  if (typeof trendyolUrl !== "string" || !isTrendyolUrl(trendyolUrl)) {
     return jsonError("INVALID_URL", "Geçerli bir trendyol.com ürün URL'si girin", 400);
   }
 
