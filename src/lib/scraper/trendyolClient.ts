@@ -9,6 +9,14 @@ const MAX_PAGES = 500;
 
 export type PageFetcher = (url: string) => Promise<{ status: number; body: string }>;
 
+// headless:false ZORUNLU (Cloudflare headless'ı engelliyor, bkz. fetchAllReviews) ama
+// pencerenin ekranda görünüp kullanıcıyı rahatsız etmesine gerek yok — gerçek bir
+// pencere olarak açılır (Cloudflare'in beklediği gibi) ama ekranın çok dışına
+// konumlandırılır, böylece kimse görmez.
+function launchHeadedBrowser() {
+  return chromium.launch({ headless: false, args: ["--window-position=-32000,-32000"] });
+}
+
 function randomDelay(): Promise<void> {
   const [min, max] = REQUEST_DELAY_RANGE_MS;
   const ms = Math.floor(Math.random() * (max - min + 1)) + min;
@@ -83,7 +91,7 @@ export type ProductInfo = { name: string | null; imageUrl: string | null };
 
 /** Ürün sayfasının og:title/og:image meta etiketlerinden gerçek ad ve görseli çeker. */
 export async function fetchProductInfo(trendyolUrl: string): Promise<ProductInfo> {
-  const browser = await chromium.launch({ headless: false });
+  const browser = await launchHeadedBrowser();
   try {
     const context = await browser.newContext({ locale: "tr-TR" });
     const page = await context.newPage();
@@ -110,7 +118,7 @@ const DISCOVERY_STABLE_ROUNDS = 3;
  * ile yeni ürün yüklüyor; art arda birkaç kaydırmada yeni ürün gelmeyince durur.
  */
 export async function discoverSellerProductIds(sellerUrl: string): Promise<string[]> {
-  const browser = await chromium.launch({ headless: false });
+  const browser = await launchHeadedBrowser();
   try {
     const context = await browser.newContext({ locale: "tr-TR" });
     const page = await context.newPage();
@@ -145,7 +153,7 @@ export async function fetchAllReviews(trendyolProductId: string): Promise<Parsed
   // isteğinde dahi 403 ile engelliyor (otomasyon parmak izi; headed modda aynı
   // istek 200 dönüyor). Production'da ekransız bir sunucuda çalıştırmak için Xvfb
   // (veya benzeri sanal ekran) gerekir — bkz. README "Dağıtım notları".
-  const browser = await chromium.launch({ headless: false });
+  const browser = await launchHeadedBrowser();
   try {
     const context = await browser.newContext({
       locale: "tr-TR",
