@@ -21,8 +21,15 @@ function extractProductId(trendyolUrl: string): string | null {
 const minRatingSchema = z.number().int().min(1).max(5).optional();
 
 export async function GET() {
-  const products = await prisma.product.findMany({ orderBy: { createdAt: "desc" } });
-  return NextResponse.json({ data: products });
+  const products = await prisma.product.findMany({
+    orderBy: { createdAt: "desc" },
+    include: { _count: { select: { reviews: { where: { isDisplayed: true } } } } },
+  });
+  const data = products.map(({ _count, ...product }) => ({
+    ...product,
+    displayedReviewCount: _count.reviews,
+  }));
+  return NextResponse.json({ data });
 }
 
 export async function POST(request: Request) {

@@ -42,6 +42,39 @@ describe("/api/admin/products", () => {
     expect(body.data).toHaveLength(1);
   });
 
+  it("includes displayedReviewCount, counting only isDisplayed reviews", async () => {
+    const product = await prisma.product.create({
+      data: { trendyolProductId: "1", trendyolUrl: "https://x", name: "Ürün 1" },
+    });
+    await prisma.review.create({
+      data: {
+        productId: product.id,
+        trendyolReviewId: "r1",
+        rating: 5,
+        comment: "a",
+        authorName: "A",
+        reviewDate: new Date(),
+        isDisplayed: true,
+      },
+    });
+    await prisma.review.create({
+      data: {
+        productId: product.id,
+        trendyolReviewId: "r2",
+        rating: 5,
+        comment: "b",
+        authorName: "B",
+        reviewDate: new Date(),
+        isDisplayed: false,
+      },
+    });
+
+    const response = await GET();
+    const body = await response.json();
+
+    expect(body.data[0].displayedReviewCount).toBe(1);
+  });
+
   it("accepts an optional minRating and stores it on the product", async () => {
     const request = new Request("http://localhost/api/admin/products", {
       method: "POST",

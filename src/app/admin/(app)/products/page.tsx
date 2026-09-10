@@ -13,7 +13,15 @@ type Product = {
   maxDisplayedReviews: number;
   externalRef: string | null;
   storeId: string | null;
+  displayedReviewCount: number;
 };
+
+function widgetStatus(p: Product): { label: string; className: string } {
+  if (!p.isTracked) return { label: "Durduruldu", className: "badge-neutral" };
+  if (!p.externalRef) return { label: "Eşleşme yok", className: "badge-neutral" };
+  if (p.displayedReviewCount === 0) return { label: "Yorum bekleniyor", className: "badge-accent" };
+  return { label: `Gösteriliyor (${p.displayedReviewCount})`, className: "badge-success" };
+}
 
 function formatDate(value: string | null): string {
   if (!value) return "Henüz taranmadı";
@@ -309,6 +317,7 @@ export default function ProductsPage() {
               <tr>
                 <th>Ürün</th>
                 <th>Durum</th>
+                <th>Sitede yorumlar</th>
                 <th>Minimum puan</th>
                 <th>Sitede gösterilecek yorum</th>
                 <th>Site stok kodu</th>
@@ -361,6 +370,12 @@ export default function ProductsPage() {
                     <span className={`badge ${p.isTracked ? "badge-success" : "badge-neutral"}`}>
                       {p.isTracked ? "Takip ediliyor" : "Durduruldu"}
                     </span>
+                  </td>
+                  <td>
+                    {(() => {
+                      const status = widgetStatus(p);
+                      return <span className={`badge ${status.className}`}>{status.label}</span>;
+                    })()}
                   </td>
                   <td>
                     <select
@@ -432,7 +447,7 @@ export default function ProductsPage() {
                 </tr>
                 {widgetCodeProductId === p.id && (
                   <tr>
-                    <td colSpan={8} style={{ background: "var(--surface-muted)" }}>
+                    <td colSpan={9} style={{ background: "var(--surface-muted)" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                         <code
                           style={{
