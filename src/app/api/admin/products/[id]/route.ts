@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/api/errors";
@@ -9,14 +10,17 @@ const patchBodySchema = z
     isTracked: z.boolean().optional(),
     minRating: z.number().int().min(1).max(5).nullable().optional(),
     maxDisplayedReviews: z.number().int().min(1).max(500).optional(),
+    externalRef: z.string().trim().min(1).max(200).nullable().optional(),
   })
   .refine(
     (data) =>
       data.isTracked !== undefined ||
       data.minRating !== undefined ||
-      data.maxDisplayedReviews !== undefined,
+      data.maxDisplayedReviews !== undefined ||
+      data.externalRef !== undefined,
     {
-      message: "isTracked, minRating veya maxDisplayedReviews alanlarından en az biri gönderilmeli",
+      message:
+        "isTracked, minRating, maxDisplayedReviews veya externalRef alanlarından en az biri gönderilmeli",
     }
   );
 
@@ -37,11 +41,11 @@ export async function PATCH(
   if (!parsed.success) {
     return jsonError(
       "INVALID_BODY",
-      "isTracked boolean, minRating 1-5 arası bir tam sayı/null, maxDisplayedReviews 1-500 arası bir tam sayı olmalı",
+      "isTracked boolean, minRating 1-5 arası bir tam sayı/null, maxDisplayedReviews 1-500 arası bir tam sayı, externalRef boş olmayan bir metin/null olmalı",
       400
     );
   }
-  const { isTracked, minRating, maxDisplayedReviews } = parsed.data;
+  const { isTracked, minRating, maxDisplayedReviews, externalRef } = parsed.data;
 
   try {
     const product = await prisma.product.update({
@@ -50,12 +54,16 @@ export async function PATCH(
         ...(isTracked !== undefined ? { isTracked } : {}),
         ...(minRating !== undefined ? { minRating } : {}),
         ...(maxDisplayedReviews !== undefined ? { maxDisplayedReviews } : {}),
+        ...(externalRef !== undefined ? { externalRef } : {}),
       },
     });
     // Vitrin boyutu değiştiyse yeni sınıra göre hemen yeniden hesapla.
     if (maxDisplayedReviews !== undefined) await syncDisplayedReviews(id);
     return NextResponse.json(product);
-  } catch {
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return jsonError("CONFLICT", "Bu externalRef başka bir ürün tarafından kullanılıyor", 409);
+    }
     // Prisma bilinmeyen id için P2025 fırlatır; 500 yerine 404 dönüyoruz.
     return jsonError("NOT_FOUND", "Ürün bulunamadı", 404);
   }

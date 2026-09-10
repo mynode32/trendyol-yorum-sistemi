@@ -1,6 +1,11 @@
 type WidgetOptions = {
   apiBaseUrl: string;
-  productId: string;
+  // İkisinden en az biri verilmeli: productId doğrudan bizim internal id'miz,
+  // externalRef ise host sitenin kendi ürün kodu (örn. İdeaSoft stok kodu) —
+  // verilirse önce /resolve ile productId'ye çevrilir. Bu sayede tek bir
+  // site-geneli script tag'i her ürün sayfasında doğru ürünü bulabilir.
+  productId?: string;
+  externalRef?: string;
   accentColor?: string;
   hideFilters?: boolean;
   storeUrl?: string;
@@ -238,14 +243,35 @@ function renderReviewItems(reviews: ReviewItem[], carousel?: boolean): string {
 }
 
 export async function renderReviewWidget(container: HTMLElement, options: WidgetOptions) {
-  const { apiBaseUrl, productId, accentColor, hideFilters, storeUrl, carousel, hideSummary } = options;
-  const encodedProductId = encodeURIComponent(productId);
+  const { apiBaseUrl, accentColor, hideFilters, storeUrl, carousel, hideSummary, externalRef } = options;
   // Shadow DOM içindeki stiller CSS custom property'lerini host elemandan miras alır —
   // bu sayede her müşteri kendi marka rengini widget'ı değiştirmeden verebilir.
   if (accentColor) container.style.setProperty("--ty-accent", accentColor);
   // Widget kendi stilini ve DOM'unu shadow DOM içinde izole eder ki host sitenin
   // CSS'i ile çakışmasın (bkz. design.md bölüm 7).
   const root = container.shadowRoot ?? container.attachShadow({ mode: "open" });
+
+  root.innerHTML = `<div data-testid="loading">Yorumlar yükleniyor...</div>`;
+
+  let productId = options.productId;
+  if (!productId && externalRef) {
+    try {
+      const resolveRes = await fetch(`${apiBaseUrl}/api/v1/products/resolve?ref=${encodeURIComponent(externalRef)}`);
+      if (resolveRes.ok) {
+        productId = (await resolveRes.json()).id;
+      }
+    } catch {
+      // productId undefined kalır, aşağıda sessizce hiçbir şey render edilmez.
+    }
+  }
+  if (!productId) {
+    // Bu sayfadaki ürün için eşleşen bir Trendyol ürünü henüz yok/taranmamış —
+    // hata göstermek yerine widget'ı sessizce boş bırakıyoruz (tek bir
+    // site-geneli script her ürün sayfasında çalıştığı için bu normal bir durum).
+    root.innerHTML = "";
+    return;
+  }
+  const encodedProductId = encodeURIComponent(productId);
 
   const state: FilterState = {
     stars: new Set(),
@@ -256,8 +282,6 @@ export async function renderReviewWidget(container: HTMLElement, options: Widget
     sort: "newest",
     page: 1,
   };
-
-  root.innerHTML = `<div data-testid="loading">Yorumlar yükleniyor...</div>`;
 
   let summary: Summary;
   let initialReviews: ReviewsResponse;

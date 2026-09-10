@@ -203,6 +203,52 @@ describe("renderReviewWidget", () => {
     expect(img!.src).toBe("https://example.com/photo1.jpg");
   });
 
+  it("resolves productId via externalRef when productId is not directly provided", async () => {
+    const fetchMock = vi.fn((url: string) => {
+      if (url.includes("/resolve")) {
+        return Promise.resolve(new Response(JSON.stringify({ id: "internal-prod-9" })));
+      }
+      if (url.includes("/summary")) {
+        return Promise.resolve(new Response(JSON.stringify({ averageRating: 4.0, totalReviews: 1 })));
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({ data: [], pagination: { page: 1, pageSize: 20, total: 0 } }))
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    await renderReviewWidget(container, { apiBaseUrl: "http://localhost", externalRef: "SKU-42" });
+
+    expect(container.shadowRoot!.querySelector(".ty-widget__title")).not.toBeNull();
+    const calledUrls = fetchMock.mock.calls.map((c) => c[0] as string);
+    expect(calledUrls[0]).toContain("ref=SKU-42");
+    expect(calledUrls.some((u) => u.includes("/products/internal-prod-9/summary"))).toBe(true);
+    expect(calledUrls.some((u) => u.includes("/products/internal-prod-9/reviews"))).toBe(true);
+  });
+
+  it("renders nothing (no error state) when externalRef does not resolve to a product", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.includes("/resolve")) {
+          return Promise.resolve(
+            new Response(JSON.stringify({ error: { code: "PRODUCT_NOT_FOUND", message: "yok" } }), { status: 404 })
+          );
+        }
+        throw new Error("resolve başarısızken başka bir istek atılmamalı");
+      })
+    );
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    await renderReviewWidget(container, { apiBaseUrl: "http://localhost", externalRef: "unknown-sku" });
+
+    expect(container.shadowRoot!.querySelector(".ty-widget__title")).toBeNull();
+    expect(container.shadowRoot!.querySelector(".ty-widget__error")).toBeNull();
+  });
+
   it("renders a fixed 'Trendyol Yorumları' title", async () => {
     vi.stubGlobal(
       "fetch",

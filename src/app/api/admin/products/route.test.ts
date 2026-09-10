@@ -151,6 +151,47 @@ describe("/api/admin/products", () => {
     expect((await clearResponse.json()).minRating).toBeNull();
   });
 
+  it("updates a product's externalRef, and can clear it back to null", async () => {
+    const product = await prisma.product.create({
+      data: { trendyolProductId: "p1", trendyolUrl: "https://x", name: "Ürün" },
+    });
+
+    const request = new Request(`http://localhost/api/admin/products/${product.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ externalRef: "SKU-42" }),
+    });
+    const response = await PATCH(request, { params: Promise.resolve({ id: product.id }) });
+    expect(response.status).toBe(200);
+    expect((await response.json()).externalRef).toBe("SKU-42");
+
+    const clearRequest = new Request(`http://localhost/api/admin/products/${product.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ externalRef: null }),
+    });
+    const clearResponse = await PATCH(clearRequest, { params: Promise.resolve({ id: product.id }) });
+    expect(clearResponse.status).toBe(200);
+    expect((await clearResponse.json()).externalRef).toBeNull();
+  });
+
+  it("returns 409 CONFLICT instead of 500 when externalRef already belongs to another product", async () => {
+    await prisma.product.create({
+      data: { trendyolProductId: "p1", trendyolUrl: "https://x", name: "Ürün 1", externalRef: "SKU-1" },
+    });
+    const product2 = await prisma.product.create({
+      data: { trendyolProductId: "p2", trendyolUrl: "https://x", name: "Ürün 2" },
+    });
+
+    const request = new Request(`http://localhost/api/admin/products/${product2.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ externalRef: "SKU-1" }),
+    });
+    const response = await PATCH(request, { params: Promise.resolve({ id: product2.id }) });
+
+    expect(response.status).toBe(409);
+    const body = await response.json();
+    expect(body.error.code).toBe("CONFLICT");
+  });
+
   it("returns 404 instead of 500 when patching an unknown product id", async () => {
     const request = new Request("http://localhost/api/admin/products/does-not-exist", {
       method: "PATCH",

@@ -26,6 +26,11 @@ model Product {
   // Sitede aynı anda en fazla bu kadar yorum "vitrin"de tutulur (en yeni N).
   // Yeni uygun bir yorum eklendiğinde en eskisi vitrinden düşer.
   maxDisplayedReviews Int       @default(50)
+  // Müşterinin kendi e-ticaret sitesindeki ürün kodu (örn. İdeaSoft stok kodu).
+  // Widget bunu tek bir site-geneli script'ten {productStockcode} gibi bir
+  // şablon değişkeniyle alıp /resolve endpoint'i üzerinden doğru ürünü bulur —
+  // her ürün için ayrı script yazmaya gerek kalmaz.
+  externalRef       String?     @unique
   lastScrapedAt     DateTime?
   createdAt         DateTime    @default(now())
   reviews           Review[]

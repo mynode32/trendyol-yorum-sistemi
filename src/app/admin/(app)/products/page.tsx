@@ -11,6 +11,7 @@ type Product = {
   lastScrapedAt: string | null;
   minRating: number | null;
   maxDisplayedReviews: number;
+  externalRef: string | null;
 };
 
 function formatDate(value: string | null): string {
@@ -132,6 +133,29 @@ export default function ProductsPage() {
       await load();
     } catch {
       setError("Gösterilecek yorum sayısı güncellenemedi.");
+    } finally {
+      setActionProductId(null);
+    }
+  }
+
+  async function updateExternalRef(product: Product, rawValue: string) {
+    const externalRef = rawValue.trim() ? rawValue.trim() : null;
+    if (externalRef === product.externalRef) return;
+    setActionProductId(product.id);
+    setError(null);
+    try {
+      const res = await adminFetch(`/api/admin/products/${product.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ externalRef }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error?.message ?? "Site stok kodu güncellenemedi.");
+      }
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Site stok kodu güncellenemedi.");
     } finally {
       setActionProductId(null);
     }
@@ -274,6 +298,7 @@ export default function ProductsPage() {
                 <th>Durum</th>
                 <th>Minimum puan</th>
                 <th>Sitede gösterilecek yorum</th>
+                <th>Site stok kodu</th>
                 <th>Son tarama</th>
                 <th aria-label="işlemler"></th>
               </tr>
@@ -337,6 +362,17 @@ export default function ProductsPage() {
                       disabled={actionProductId === p.id}
                     />
                   </td>
+                  <td>
+                    <input
+                      type="text"
+                      className="input"
+                      style={{ height: 32, fontSize: 13, padding: "0 8px", width: 110 }}
+                      defaultValue={p.externalRef ?? ""}
+                      placeholder="örn. SKU-123"
+                      onBlur={(e) => updateExternalRef(p, e.target.value)}
+                      disabled={actionProductId === p.id}
+                    />
+                  </td>
                   <td style={{ color: "var(--text-muted)" }}>{formatDate(p.lastScrapedAt)}</td>
                   <td>
                     <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
@@ -363,7 +399,7 @@ export default function ProductsPage() {
                 </tr>
                 {widgetCodeProductId === p.id && (
                   <tr>
-                    <td colSpan={6} style={{ background: "var(--surface-muted)" }}>
+                    <td colSpan={7} style={{ background: "var(--surface-muted)" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                         <code
                           style={{
