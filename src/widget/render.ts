@@ -4,6 +4,7 @@ type WidgetOptions = {
   accentColor?: string;
   hideFilters?: boolean;
   storeUrl?: string;
+  carousel?: boolean;
 };
 
 type Summary = {
@@ -76,6 +77,13 @@ function injectStylesOnce(root: ShadowRoot) {
     .ty-widget__filters input[type="date"] { padding: 3px 6px; border: 1px solid #ccc; border-radius: 4px; }
     .ty-widget__filters select { padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; }
     .ty-widget__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; min-height: 40px; }
+    .ty-widget__list--carousel { overflow: hidden; padding-bottom: 4px; }
+    .ty-widget__carousel-track { display: flex; gap: 12px; width: max-content;
+      animation: ty-widget-scroll 32s linear infinite; }
+    .ty-widget__list--carousel:hover .ty-widget__carousel-track,
+    .ty-widget__list--carousel:focus-within .ty-widget__carousel-track { animation-play-state: paused; }
+    @keyframes ty-widget-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+    .ty-widget__list--carousel .ty-widget__item { flex: 0 0 260px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
     .ty-widget__item { border: 1px solid #e5e5e5; border-radius: 8px; padding: 10px 12px; }
     .ty-widget__item-rating { color: #ff9500; font-weight: 700; margin-right: 6px; }
     .ty-widget__item-author { font-weight: 600; }
@@ -125,7 +133,7 @@ function renderRatingDistribution(summary: Summary): string {
 
 function renderShell(
   summary: Summary,
-  shellOptions: { hideFilters?: boolean; storeUrl?: string }
+  shellOptions: { hideFilters?: boolean; storeUrl?: string; carousel?: boolean }
 ): string {
   const starOptions = [5, 4, 3, 2, 1]
     .map((s) => `<label><input type="checkbox" data-star="${s}"> ${s}★</label>`)
@@ -152,6 +160,19 @@ function renderShell(
     ? `<a class="ty-widget__store-link" href="${escapeHtml(shellOptions.storeUrl)}" target="_blank" rel="noreferrer">Trendyol mağazamızı görüntüleyin ↗</a>`
     : "";
 
+  const listClass = shellOptions.carousel ? "ty-widget__list ty-widget__list--carousel" : "ty-widget__list";
+
+  // Kaydırmalı vitrin modunda sayfalama anlamsız (tüm yüklenen yorumlar zaten
+  // sürekli kayarak gösteriliyor) — bu yüzden gizleniyor.
+  const pagination = shellOptions.carousel
+    ? ""
+    : `
+      <div class="ty-widget__pagination">
+        <button type="button" data-action="prev">‹ Önceki</button>
+        <span data-role="page-info"></span>
+        <button type="button" data-action="next">Sonraki ›</button>
+      </div>`;
+
   return `
     <div class="ty-widget">
       <div class="ty-widget__title">Trendyol Yorumları</div>
@@ -159,20 +180,13 @@ function renderShell(
       ${renderRatingDistribution(summary)}
       ${storeLink}
       ${filters}
-      <ul class="ty-widget__list" data-role="list"></ul>
-      <div class="ty-widget__pagination">
-        <button type="button" data-action="prev">‹ Önceki</button>
-        <span data-role="page-info"></span>
-        <button type="button" data-action="next">Sonraki ›</button>
-      </div>
+      <ul class="${listClass}" data-role="list"></ul>
+      ${pagination}
     </div>
   `;
 }
 
-function renderReviewItems(reviews: ReviewItem[]): string {
-  if (reviews.length === 0) {
-    return `<li class="ty-widget__empty">Bu filtrelere uyan yorum bulunamadı.</li>`;
-  }
+function renderReviewItemsHtml(reviews: ReviewItem[]): string {
   return reviews
     .map((r) => {
       const photos = (r.photoUrls ?? [])
@@ -189,8 +203,20 @@ function renderReviewItems(reviews: ReviewItem[]): string {
     .join("");
 }
 
+function renderReviewItems(reviews: ReviewItem[], carousel?: boolean): string {
+  if (reviews.length === 0) {
+    return `<li class="ty-widget__empty">Bu filtrelere uyan yorum bulunamadı.</li>`;
+  }
+  const itemsHtml = renderReviewItemsHtml(reviews);
+  if (!carousel) return itemsHtml;
+  // Kesintisiz döngü illüzyonu için kart dizisi iki kez tekrarlanıp track %50
+  // kaydırılır — track sonuna gelince başa dönmüş gibi görünür (bkz. CSS
+  // ty-widget-scroll keyframe'i, translateX(-50%)).
+  return `<div class="ty-widget__carousel-track">${itemsHtml}${renderReviewItemsHtml(reviews)}</div>`;
+}
+
 export async function renderReviewWidget(container: HTMLElement, options: WidgetOptions) {
-  const { apiBaseUrl, productId, accentColor, hideFilters, storeUrl } = options;
+  const { apiBaseUrl, productId, accentColor, hideFilters, storeUrl, carousel } = options;
   const encodedProductId = encodeURIComponent(productId);
   // Shadow DOM içindeki stiller CSS custom property'lerini host elemandan miras alır —
   // bu sayede her müşteri kendi marka rengini widget'ı değiştirmeden verebilir.
@@ -228,15 +254,16 @@ export async function renderReviewWidget(container: HTMLElement, options: Widget
     return;
   }
 
-  root.innerHTML = renderShell(summary, { hideFilters, storeUrl });
+  root.innerHTML = renderShell(summary, { hideFilters, storeUrl, carousel });
   injectStylesOnce(root);
 
   const listEl = root.querySelector<HTMLUListElement>('[data-role="list"]')!;
-  const pageInfoEl = root.querySelector<HTMLElement>('[data-role="page-info"]')!;
-  const prevBtn = root.querySelector<HTMLButtonElement>('[data-action="prev"]')!;
-  const nextBtn = root.querySelector<HTMLButtonElement>('[data-action="next"]')!;
+  const pageInfoEl = root.querySelector<HTMLElement>('[data-role="page-info"]');
+  const prevBtn = root.querySelector<HTMLButtonElement>('[data-action="prev"]');
+  const nextBtn = root.querySelector<HTMLButtonElement>('[data-action="next"]');
 
   function applyPagination(pagination: ReviewsResponse["pagination"]) {
+    if (!pageInfoEl || !prevBtn || !nextBtn) return;
     const totalPages = Math.max(1, Math.ceil(pagination.total / pagination.pageSize));
     pageInfoEl.textContent = `Sayfa ${state.page} / ${totalPages}`;
     prevBtn.disabled = state.page <= 1;
@@ -249,7 +276,7 @@ export async function renderReviewWidget(container: HTMLElement, options: Widget
       const res = await fetch(`${apiBaseUrl}/api/v1/products/${encodedProductId}/reviews?${buildQueryString(state)}`);
       if (!res.ok) throw new Error("API'den başarısız yanıt");
       const body: ReviewsResponse = await res.json();
-      listEl.innerHTML = renderReviewItems(body.data);
+      listEl.innerHTML = renderReviewItems(body.data, carousel);
       applyPagination(body.pagination);
     } catch {
       listEl.innerHTML = `<li class="ty-widget__error">Yorumlar yüklenemedi.</li>`;
@@ -301,17 +328,17 @@ export async function renderReviewWidget(container: HTMLElement, options: Widget
     void loadReviews();
   });
 
-  prevBtn.addEventListener("click", () => {
+  prevBtn?.addEventListener("click", () => {
     if (state.page <= 1) return;
     state.page -= 1;
     void loadReviews();
   });
 
-  nextBtn.addEventListener("click", () => {
+  nextBtn?.addEventListener("click", () => {
     state.page += 1;
     void loadReviews();
   });
 
-  listEl.innerHTML = renderReviewItems(initialReviews.data);
+  listEl.innerHTML = renderReviewItems(initialReviews.data, carousel);
   applyPagination(initialReviews.pagination);
 }

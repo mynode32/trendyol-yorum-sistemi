@@ -360,6 +360,70 @@ describe("renderReviewWidget", () => {
     expect(container.shadowRoot!.querySelector(".ty-widget__store-link")).toBeNull();
   });
 
+  it("duplicates review cards inside a scrolling track when carousel is enabled", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.includes("/summary")) {
+          return Promise.resolve(new Response(JSON.stringify({ averageRating: 4.0, totalReviews: 2 })));
+        }
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [
+                { id: "1", rating: 5, comment: "Harika", authorName: "A", hasPhoto: false, reviewDate: "2026-01-01" },
+                { id: "2", rating: 4, comment: "İyi", authorName: "B", hasPhoto: false, reviewDate: "2026-01-02" },
+              ],
+              pagination: { page: 1, pageSize: 20, total: 2 },
+            })
+          )
+        );
+      })
+    );
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    await renderReviewWidget(container, { apiBaseUrl: "http://localhost", productId: "prod-1", carousel: true });
+
+    const list = container.shadowRoot!.querySelector(".ty-widget__list");
+    expect(list?.classList.contains("ty-widget__list--carousel")).toBe(true);
+    const track = container.shadowRoot!.querySelector(".ty-widget__carousel-track");
+    expect(track).not.toBeNull();
+    // 2 yorum x 2 (kesintisiz döngü için tekrarlanmış) = 4 kart
+    expect(track!.querySelectorAll(".ty-widget__item").length).toBe(4);
+    // Kaydırmalı modda sayfalama anlamsız — gösterilmemeli.
+    expect(container.shadowRoot!.querySelector(".ty-widget__pagination")).toBeNull();
+  });
+
+  it("does not duplicate cards or add the carousel class when carousel is not set", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.includes("/summary")) {
+          return Promise.resolve(new Response(JSON.stringify({ averageRating: 4.0, totalReviews: 1 })));
+        }
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [{ id: "1", rating: 5, comment: "Harika", authorName: "A", hasPhoto: false, reviewDate: "2026-01-01" }],
+              pagination: { page: 1, pageSize: 20, total: 1 },
+            })
+          )
+        );
+      })
+    );
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    await renderReviewWidget(container, { apiBaseUrl: "http://localhost", productId: "prod-1" });
+
+    const list = container.shadowRoot!.querySelector(".ty-widget__list");
+    expect(list?.classList.contains("ty-widget__list--carousel")).toBe(false);
+    expect(container.shadowRoot!.querySelector(".ty-widget__carousel-track")).toBeNull();
+    expect(container.shadowRoot!.querySelectorAll(".ty-widget__item").length).toBe(1);
+    expect(container.shadowRoot!.querySelector(".ty-widget__pagination")).not.toBeNull();
+  });
+
   it("renders filter controls (star checkboxes, date range, photo toggle, search, sort, pagination)", async () => {
     vi.stubGlobal(
       "fetch",
