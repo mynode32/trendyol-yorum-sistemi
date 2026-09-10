@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "scrape:once": "tsx scripts/scrape-once.ts",
     "scheduler:start": "tsx scripts/run-scheduler.ts",
-    "scheduler:run-once": "tsx scripts/run-scheduled-scrape-once.ts"
+    "scheduler:run-once": "tsx scripts/run-scheduled-scrape-once.ts",
+    "bulk-import": "tsx scripts/bulk-import-from-seller.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

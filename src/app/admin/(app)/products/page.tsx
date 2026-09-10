@@ -35,10 +35,6 @@ export default function ProductsPage() {
   const [error, setError] = useState<string | null>(null);
   const [widgetCodeProductId, setWidgetCodeProductId] = useState<string | null>(null);
   const [copiedProductId, setCopiedProductId] = useState<string | null>(null);
-  const [sellerUrl, setSellerUrl] = useState("");
-  const [bulkStoreId, setBulkStoreId] = useState("");
-  const [bulkImporting, setBulkImporting] = useState(false);
-  const [bulkResult, setBulkResult] = useState<string | null>(null);
 
   async function load() {
     try {
@@ -217,37 +213,6 @@ export default function ProductsPage() {
     }
   }
 
-  async function bulkImportFromSeller(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setBulkResult(null);
-    setBulkImporting(true);
-    try {
-      const res = await adminFetch("/api/admin/products/bulk-import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sellerUrl,
-          ...(bulkStoreId.trim() ? { storeId: bulkStoreId.trim() } : {}),
-        }),
-      });
-      const body = await res.json().catch(() => null);
-      if (!res.ok) {
-        throw new Error(body?.error?.message ?? "Mağazadan ürünler bulunamadı.");
-      }
-      setBulkResult(
-        `${body.discovered} ürün bulundu — ${body.added} yeni eklendi, ${body.skipped} zaten ekliydi.`
-      );
-      setSellerUrl("");
-      setBulkStoreId("");
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Mağazadan ürünler bulunamadı.");
-    } finally {
-      setBulkImporting(false);
-    }
-  }
-
   return (
     <div className="page">
       <div className="page-header">
@@ -294,39 +259,22 @@ export default function ProductsPage() {
         </button>
       </form>
 
-      <form
-        onSubmit={bulkImportFromSeller}
-        className="card"
-        style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 28 }}
-      >
-        <div className="field" style={{ flex: "1 1 240px" }}>
-          <label htmlFor="sellerUrl">Trendyol mağaza URL&apos;si (toplu ekle)</label>
-          <input
-            id="sellerUrl"
-            className="input"
-            value={sellerUrl}
-            onChange={(e) => setSellerUrl(e.target.value)}
-            placeholder="https://www.trendyol.com/magaza-adi-x-b123456"
-            required
-          />
-        </div>
-        <div className="field" style={{ flex: "0 1 160px" }}>
-          <label htmlFor="bulkStoreId">Mağaza etiketi</label>
-          <input
-            id="bulkStoreId"
-            className="input"
-            value={bulkStoreId}
-            onChange={(e) => setBulkStoreId(e.target.value)}
-            placeholder="örn. enwood"
-          />
-        </div>
-        <button type="submit" className="btn btn-primary" style={{ alignSelf: "flex-end" }} disabled={bulkImporting}>
-          {bulkImporting ? "Ürünler bulunuyor…" : "Mağazadaki Ürünleri Bul ve Ekle"}
-        </button>
-      </form>
-
       {error && <p className="alert alert-error" style={{ marginBottom: 20 }}>{error}</p>}
-      {bulkResult && <p className="alert alert-success" style={{ marginBottom: 20 }}>{bulkResult}</p>}
+
+      <p
+        style={{
+          fontSize: 13,
+          color: "var(--text-muted)",
+          background: "var(--surface-muted)",
+          border: "1px solid var(--border)",
+          borderRadius: "var(--radius-sm)",
+          padding: "10px 14px",
+          marginBottom: 20,
+        }}
+      >
+        Bir mağazanın tüm ürünlerini tek seferde eklemek için, bu bilgisayarda:{" "}
+        <code>npm run bulk-import -- &lt;mağaza-linki&gt; &lt;mağaza-etiketi&gt;</code>
+      </p>
 
       <p
         style={{
