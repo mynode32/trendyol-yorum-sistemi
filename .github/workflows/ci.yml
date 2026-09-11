@@ -27,7 +27,6 @@ jobs:
     env:
       DATABASE_URL: postgresql://trendyol:trendyol@localhost:5432/trendyol_reviews
       DIRECT_URL: postgresql://trendyol:trendyol@localhost:5432/trendyol_reviews
-      ADMIN_PASSWORD: ci-only-password
       SESSION_SECRET: ci-only-secret-32-characters-long!!
 
     steps:
