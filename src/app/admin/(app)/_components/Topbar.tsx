@@ -3,7 +3,7 @@ import { MenuIcon } from "./icons";
 const TITLES: { test: (pathname: string) => boolean; label: string }[] = [
   { test: (p) => p.startsWith("/admin/products/") && p.includes("/reviews"), label: "Yorum Moderasyonu" },
   { test: (p) => p.startsWith("/admin/products"), label: "Ürünler" },
-  { test: (p) => p.startsWith("/admin/analytics"), label: "Analytics" },
+  { test: (p) => p.startsWith("/admin/analytics"), label: "Yorum Analizi" },
   { test: (p) => p.startsWith("/admin/scrape-logs"), label: "Scraper İzleme" },
   { test: (p) => p.startsWith("/admin/settings"), label: "Ayarlar" },
 ];

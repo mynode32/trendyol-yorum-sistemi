@@ -78,7 +78,7 @@ export default function AnalyticsPage() {
         return res.json();
       })
       .then((body) => setData(body))
-      .catch(() => showToast("Analytics verisi yüklenemedi. Sayfayı yenilemeyi deneyin.", "error"))
+      .catch(() => showToast("Yorum analizi verisi yüklenemedi. Sayfayı yenilemeyi deneyin.", "error"))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -87,7 +87,7 @@ export default function AnalyticsPage() {
     <div className="admin-page">
       <div className="page-header">
         <div>
-          <h1>Analytics</h1>
+          <h1>Yorum Analizi</h1>
           <p className="page-header__subtitle">Yorumlarınızın genel görünümü.</p>
         </div>
       </div>
