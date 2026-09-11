@@ -1,7 +1,9 @@
 "use client";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { adminFetch } from "@/lib/adminFetch";
 import { KpiCard } from "../_components/KpiCard";
+import { SettingsIcon, SortIcon } from "../_components/icons";
+import { useToast } from "../_components/Toast";
 
 type Product = {
   id: string;
@@ -18,11 +20,28 @@ type Product = {
   displayedReviewCount: number;
 };
 
+type StatusFilter = "all" | "tracked" | "stopped" | "unmatched";
+type SortKey = "name" | "lastScrapedAt";
+type SortDir = "asc" | "desc";
+
 function widgetStatus(p: Product): { label: string; className: string } {
   if (!p.isTracked) return { label: "Durduruldu", className: "badge-neutral" };
   if (!p.externalRef) return { label: "Eşleşme yok", className: "badge-neutral" };
   if (p.displayedReviewCount === 0) return { label: "Yorum bekleniyor", className: "badge-accent" };
   return { label: `Gösteriliyor (${p.displayedReviewCount})`, className: "badge-success" };
+}
+
+function matchesStatus(p: Product, filter: StatusFilter): boolean {
+  switch (filter) {
+    case "tracked":
+      return p.isTracked;
+    case "stopped":
+      return !p.isTracked;
+    case "unmatched":
+      return p.isTracked && !p.externalRef;
+    default:
+      return true;
+  }
 }
 
 function formatDate(value: string | null): string {
@@ -36,15 +55,23 @@ function formatDate(value: string | null): string {
 }
 
 export default function ProductsPage() {
+  const { showToast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [newUrl, setNewUrl] = useState("");
   const [newMinRating, setNewMinRating] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [actionProductId, setActionProductId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [widgetCodeProductId, setWidgetCodeProductId] = useState<string | null>(null);
+  const [settingsProductId, setSettingsProductId] = useState<string | null>(null);
   const [copiedProductId, setCopiedProductId] = useState<string | null>(null);
+
+  const [searchText, setSearchText] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkRunning, setBulkRunning] = useState(false);
 
   async function load() {
     try {
@@ -53,7 +80,7 @@ export default function ProductsPage() {
       const body = await res.json();
       setProducts(body.data);
     } catch {
-      setError("Ürünler yüklenemedi. Sayfayı yenilemeyi deneyin.");
+      showToast("Ürünler yüklenemedi. Sayfayı yenilemeyi deneyin.", "error");
     } finally {
       setLoading(false);
     }
@@ -64,11 +91,51 @@ export default function ProductsPage() {
     // yardımcıyı doğrudan effect içinde çağırmayı yine de işaretler.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const filteredProducts = useMemo(() => {
+    const term = searchText.trim().toLowerCase();
+    const filtered = products.filter(
+      (p) => matchesStatus(p, statusFilter) && (!term || p.name.toLowerCase().includes(term))
+    );
+    if (!sortKey) return filtered;
+    const sorted = [...filtered].sort((a, b) => {
+      if (sortKey === "name") return a.name.localeCompare(b.name, "tr");
+      const aTime = a.lastScrapedAt ? new Date(a.lastScrapedAt).getTime() : 0;
+      const bTime = b.lastScrapedAt ? new Date(b.lastScrapedAt).getTime() : 0;
+      return aTime - bTime;
+    });
+    if (sortDir === "desc") sorted.reverse();
+    return sorted;
+  }, [products, searchText, statusFilter, sortKey, sortDir]);
+
+  function toggleSort(key: SortKey) {
+    if (sortKey !== key) {
+      setSortKey(key);
+      setSortDir("asc");
+    } else {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    }
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelectedIds((prev) =>
+      prev.size === filteredProducts.length ? new Set() : new Set(filteredProducts.map((p) => p.id))
+    );
+  }
 
   async function addProduct(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
     setSubmitting(true);
     try {
       const res = await adminFetch("/api/admin/products", {
@@ -81,11 +148,12 @@ export default function ProductsPage() {
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
-        setError(body?.error?.message ?? "Ürün eklenemedi.");
+        showToast(body?.error?.message ?? "Ürün eklenemedi.", "error");
         return;
       }
       setNewUrl("");
       setNewMinRating("");
+      showToast("Ürün eklendi.");
       await load();
     } finally {
       setSubmitting(false);
@@ -94,7 +162,6 @@ export default function ProductsPage() {
 
   async function toggleTracked(product: Product) {
     setActionProductId(product.id);
-    setError(null);
     try {
       const res = await adminFetch(`/api/admin/products/${product.id}`, {
         method: "PATCH",
@@ -102,18 +169,48 @@ export default function ProductsPage() {
         body: JSON.stringify({ isTracked: !product.isTracked }),
       });
       if (!res.ok) throw new Error();
+      showToast(product.isTracked ? "Ürün durduruldu." : "Ürün takibi başlatıldı.");
       await load();
     } catch {
-      setError("Ürün takip durumu güncellenemedi.");
+      showToast("Ürün takip durumu güncellenemedi.", "error");
     } finally {
       setActionProductId(null);
+    }
+  }
+
+  async function bulkSetTracked(targetTracked: boolean) {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    setBulkRunning(true);
+    try {
+      const results = await Promise.allSettled(
+        ids.map((id) =>
+          adminFetch(`/api/admin/products/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ isTracked: targetTracked }),
+          }).then((res) => {
+            if (!res.ok) throw new Error();
+          })
+        )
+      );
+      const failed = results.filter((r) => r.status === "rejected").length;
+      const succeeded = ids.length - failed;
+      if (failed === 0) {
+        showToast(`${succeeded} ürün güncellendi.`);
+      } else {
+        showToast(`${succeeded}/${ids.length} başarılı, ${failed} başarısız.`, "error");
+      }
+      setSelectedIds(new Set());
+      await load();
+    } finally {
+      setBulkRunning(false);
     }
   }
 
   async function updateMinRating(product: Product, rawValue: string) {
     const minRating = rawValue ? Number(rawValue) : null;
     setActionProductId(product.id);
-    setError(null);
     try {
       const res = await adminFetch(`/api/admin/products/${product.id}`, {
         method: "PATCH",
@@ -123,7 +220,7 @@ export default function ProductsPage() {
       if (!res.ok) throw new Error();
       await load();
     } catch {
-      setError("Minimum puan güncellenemedi.");
+      showToast("Minimum puan güncellenemedi.", "error");
     } finally {
       setActionProductId(null);
     }
@@ -133,7 +230,6 @@ export default function ProductsPage() {
     const maxDisplayedReviews = Number(rawValue);
     if (!Number.isInteger(maxDisplayedReviews) || maxDisplayedReviews < 1) return;
     setActionProductId(product.id);
-    setError(null);
     try {
       const res = await adminFetch(`/api/admin/products/${product.id}`, {
         method: "PATCH",
@@ -143,7 +239,7 @@ export default function ProductsPage() {
       if (!res.ok) throw new Error();
       await load();
     } catch {
-      setError("Gösterilecek yorum sayısı güncellenemedi.");
+      showToast("Gösterilecek yorum sayısı güncellenemedi.", "error");
     } finally {
       setActionProductId(null);
     }
@@ -153,7 +249,6 @@ export default function ProductsPage() {
     const externalRef = rawValue.trim() ? rawValue.trim() : null;
     if (externalRef === product.externalRef) return;
     setActionProductId(product.id);
-    setError(null);
     try {
       const res = await adminFetch(`/api/admin/products/${product.id}`, {
         method: "PATCH",
@@ -164,9 +259,10 @@ export default function ProductsPage() {
         const body = await res.json().catch(() => null);
         throw new Error(body?.error?.message ?? "Site stok kodu güncellenemedi.");
       }
+      showToast("Site stok kodu güncellendi.");
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Site stok kodu güncellenemedi.");
+      showToast(err instanceof Error ? err.message : "Site stok kodu güncellenemedi.", "error");
     } finally {
       setActionProductId(null);
     }
@@ -176,7 +272,6 @@ export default function ProductsPage() {
     const storeId = rawValue.trim() ? rawValue.trim() : null;
     if (storeId === product.storeId) return;
     setActionProductId(product.id);
-    setError(null);
     try {
       const res = await adminFetch(`/api/admin/products/${product.id}`, {
         method: "PATCH",
@@ -184,9 +279,10 @@ export default function ProductsPage() {
         body: JSON.stringify({ storeId }),
       });
       if (!res.ok) throw new Error();
+      showToast("Mağaza etiketi güncellendi.");
       await load();
     } catch {
-      setError("Mağaza etiketi güncellenemedi.");
+      showToast("Mağaza etiketi güncellenemedi.", "error");
     } finally {
       setActionProductId(null);
     }
@@ -196,7 +292,6 @@ export default function ProductsPage() {
     const reviewGroupId = rawValue.trim() ? rawValue.trim() : null;
     if (reviewGroupId === product.reviewGroupId) return;
     setActionProductId(product.id);
-    setError(null);
     try {
       const res = await adminFetch(`/api/admin/products/${product.id}`, {
         method: "PATCH",
@@ -204,9 +299,10 @@ export default function ProductsPage() {
         body: JSON.stringify({ reviewGroupId }),
       });
       if (!res.ok) throw new Error();
+      showToast("Ürün serisi güncellendi.");
       await load();
     } catch {
-      setError("Ürün serisi güncellenemedi.");
+      showToast("Ürün serisi güncellenemedi.", "error");
     } finally {
       setActionProductId(null);
     }
@@ -224,20 +320,20 @@ export default function ProductsPage() {
       setCopiedProductId(product.id);
       setTimeout(() => setCopiedProductId((id) => (id === product.id ? null : id)), 2000);
     } catch {
-      setError("Kod panoya kopyalanamadı, elle seçip kopyalayın.");
+      showToast("Kod panoya kopyalanamadı, elle seçip kopyalayın.", "error");
     }
   }
 
   async function deleteProduct(product: Product) {
     if (!window.confirm(`"${product.name}" silinsin mi? Bu işlem tüm yorumlarını da siler.`)) return;
     setActionProductId(product.id);
-    setError(null);
     try {
       const res = await adminFetch(`/api/admin/products/${product.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
+      showToast("Ürün silindi.");
       await load();
     } catch {
-      setError("Ürün silinemedi.");
+      showToast("Ürün silinemedi.", "error");
     } finally {
       setActionProductId(null);
     }
@@ -300,8 +396,6 @@ export default function ProductsPage() {
         </button>
       </form>
 
-      {error && <p className="alert alert-error" style={{ marginBottom: 20 }}>{error}</p>}
-
       <p
         style={{
           fontSize: 13,
@@ -332,6 +426,49 @@ export default function ProductsPage() {
         gerekmez.
       </p>
 
+      {!loading && products.length > 0 && (
+        <div className="filter-bar">
+          <input
+            className="input"
+            placeholder="Ürün adına göre ara…"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+          />
+          <select
+            className="input filter-bar__select"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+          >
+            <option value="all">Tüm durumlar</option>
+            <option value="tracked">Takip ediliyor</option>
+            <option value="stopped">Durduruldu</option>
+            <option value="unmatched">Eşleşme yok</option>
+          </select>
+        </div>
+      )}
+
+      {selectedIds.size > 0 && (
+        <div className="bulk-bar">
+          <span>{selectedIds.size} ürün seçildi</span>
+          <div className="bulk-bar__actions">
+            <button
+              className="btn btn-secondary btn-sm"
+              disabled={bulkRunning}
+              onClick={() => bulkSetTracked(true)}
+            >
+              Seçilenleri Başlat
+            </button>
+            <button
+              className="btn btn-secondary btn-sm"
+              disabled={bulkRunning}
+              onClick={() => bulkSetTracked(false)}
+            >
+              Seçilenleri Durdur
+            </button>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {[0, 1, 2].map((i) => (
@@ -343,27 +480,56 @@ export default function ProductsPage() {
           <strong>Henüz ürün eklenmedi</strong>
           <p>Yukarıya bir Trendyol ürün URL&apos;si yapıştırarak takibe başlayın.</p>
         </div>
+      ) : filteredProducts.length === 0 ? (
+        <div className="empty-state">
+          <strong>Eşleşen ürün yok</strong>
+          <p>Arama veya filtre kriterlerini değiştirmeyi deneyin.</p>
+        </div>
       ) : (
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Ürün</th>
+                <th style={{ width: 32 }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.size > 0 && selectedIds.size === filteredProducts.length}
+                    onChange={toggleSelectAll}
+                    aria-label="Tümünü seç"
+                  />
+                </th>
+                <th className="th-sortable" onClick={() => toggleSort("name")}>
+                  <span className="th-sortable__inner">
+                    Ürün
+                    <SortIcon direction={sortKey === "name" ? sortDir : null} />
+                  </span>
+                </th>
                 <th>Durum</th>
                 <th>Sitede yorumlar</th>
                 <th>Minimum puan</th>
                 <th>Sitede gösterilecek yorum</th>
-                <th>Site stok kodu</th>
-                <th>Mağaza etiketi</th>
-                <th>Ürün serisi</th>
-                <th>Son tarama</th>
+                <th className="th-sortable" onClick={() => toggleSort("lastScrapedAt")}>
+                  <span className="th-sortable__inner">
+                    Son tarama
+                    <SortIcon direction={sortKey === "lastScrapedAt" ? sortDir : null} />
+                  </span>
+                </th>
+                <th aria-label="ayarlar"></th>
                 <th aria-label="işlemler"></th>
               </tr>
             </thead>
             <tbody>
-              {products.map((p) => (
+              {filteredProducts.map((p) => (
                 <Fragment key={p.id}>
                 <tr>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(p.id)}
+                      onChange={() => toggleSelected(p.id)}
+                      aria-label={`${p.name} seç`}
+                    />
+                  </td>
                   <td style={{ whiteSpace: "normal", minWidth: 240, maxWidth: 320 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       {p.imageUrl && (
@@ -436,41 +602,17 @@ export default function ProductsPage() {
                       disabled={actionProductId === p.id}
                     />
                   </td>
-                  <td>
-                    <input
-                      type="text"
-                      className="input"
-                      style={{ height: 32, fontSize: 13, padding: "0 8px", width: 110 }}
-                      defaultValue={p.externalRef ?? ""}
-                      placeholder="örn. SKU-123"
-                      onBlur={(e) => updateExternalRef(p, e.target.value)}
-                      disabled={actionProductId === p.id}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      className="input"
-                      style={{ height: 32, fontSize: 13, padding: "0 8px", width: 100 }}
-                      defaultValue={p.storeId ?? ""}
-                      placeholder="örn. enwood"
-                      onBlur={(e) => updateStoreId(p, e.target.value)}
-                      disabled={actionProductId === p.id}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      className="input"
-                      style={{ height: 32, fontSize: 13, padding: "0 8px", width: 130 }}
-                      defaultValue={p.reviewGroupId ?? ""}
-                      placeholder="örn. capella-tv-unitesi"
-                      title="Aynı değeri paylaşan ürünlerin yorumları birlikte (havuzlanmış) gösterilir — farklı boy/beden varyantları için kullanın."
-                      onBlur={(e) => updateReviewGroupId(p, e.target.value)}
-                      disabled={actionProductId === p.id}
-                    />
-                  </td>
                   <td style={{ color: "var(--text-muted)" }}>{formatDate(p.lastScrapedAt)}</td>
+                  <td>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm btn-icon"
+                      title="Site stok kodu, mağaza etiketi ve ürün serisi ayarları"
+                      onClick={() => setSettingsProductId(settingsProductId === p.id ? null : p.id)}
+                    >
+                      <SettingsIcon />
+                    </button>
+                  </td>
                   <td>
                     <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
                       <a href={`/admin/products/${p.id}/reviews`} className="btn btn-secondary btn-sm">
@@ -491,9 +633,54 @@ export default function ProductsPage() {
                     </div>
                   </td>
                 </tr>
+                {settingsProductId === p.id && (
+                  <tr>
+                    <td colSpan={9} style={{ background: "var(--surface-muted)" }}>
+                      <div className="row-panel">
+                        <div className="field" style={{ flex: "0 1 160px" }}>
+                          <label>Site stok kodu</label>
+                          <input
+                            type="text"
+                            className="input"
+                            defaultValue={p.externalRef ?? ""}
+                            placeholder="örn. SKU-123"
+                            onBlur={(e) => updateExternalRef(p, e.target.value)}
+                            disabled={actionProductId === p.id}
+                          />
+                        </div>
+                        <div className="field" style={{ flex: "0 1 160px" }}>
+                          <label>Mağaza etiketi</label>
+                          <input
+                            type="text"
+                            className="input"
+                            defaultValue={p.storeId ?? ""}
+                            placeholder="örn. enwood"
+                            onBlur={(e) => updateStoreId(p, e.target.value)}
+                            disabled={actionProductId === p.id}
+                          />
+                        </div>
+                        <div className="field" style={{ flex: "0 1 200px" }}>
+                          <label
+                            title="Aynı değeri paylaşan ürünlerin yorumları birlikte (havuzlanmış) gösterilir — farklı boy/beden varyantları için kullanın."
+                          >
+                            Ürün serisi
+                          </label>
+                          <input
+                            type="text"
+                            className="input"
+                            defaultValue={p.reviewGroupId ?? ""}
+                            placeholder="örn. capella-tv-unitesi"
+                            onBlur={(e) => updateReviewGroupId(p, e.target.value)}
+                            disabled={actionProductId === p.id}
+                          />
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
                 {widgetCodeProductId === p.id && (
                   <tr>
-                    <td colSpan={10} style={{ background: "var(--surface-muted)" }}>
+                    <td colSpan={9} style={{ background: "var(--surface-muted)" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                         <code
                           style={{

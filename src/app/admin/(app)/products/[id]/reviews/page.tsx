@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { adminFetch } from "@/lib/adminFetch";
 import { KpiCard } from "../../../_components/KpiCard";
+import { useToast } from "../../../_components/Toast";
 
 type Review = {
   id: string;
@@ -15,9 +16,11 @@ type Review = {
 };
 
 const PAGE_SIZE = 50;
+const SEARCH_DEBOUNCE_MS = 300;
 
 export default function ProductReviewsModerationPage() {
   const params = useParams<{ id: string }>();
+  const { showToast } = useToast();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -25,34 +28,54 @@ export default function ProductReviewsModerationPage() {
   const [openReview, setOpenReview] = useState<Review | null>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [ratingFilter, setRatingFilter] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput.trim());
+      setPage(1);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
   async function load() {
     try {
-      const res = await adminFetch(
-        `/api/admin/products/${params.id}/reviews?page=${page}&pageSize=${PAGE_SIZE}`
-      );
-      if (!res.ok) throw new Error("Yorumlar yüklenemedi");
+      const query = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+      if (search) query.set("search", search);
+      if (ratingFilter) query.set("rating", ratingFilter);
+      const res = await adminFetch(`/api/admin/products/${params.id}/reviews?${query}`);
+      if (!res.ok) throw new Error();
       const body = await res.json();
       setReviews(body.data);
       setTotal(body.pagination.total);
+    } catch {
+      showToast("Yorumlar yüklenemedi. Sayfayı yenilemeyi deneyin.", "error");
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.id, page]);
+  }, [params.id, page, search, ratingFilter]);
 
   async function toggleHidden(review: Review) {
     setReviews((prev) =>
       prev.map((r) => (r.id === review.id ? { ...r, isHidden: !r.isHidden } : r))
     );
-    await adminFetch(`/api/admin/reviews/${review.id}`, {
+    const res = await adminFetch(`/api/admin/reviews/${review.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isHidden: !review.isHidden }),
     });
+    if (!res.ok) {
+      showToast("Yorum durumu güncellenemedi.", "error");
+    }
     // Gizleme/gösterme, hangi yorumun vitrinde göründüğünü değiştirebilir
     // (sıradaki uygun yorum yerini alabilir) — güncel isDisplayed durumunu görmek için yeniden yükle.
     await load();
@@ -75,11 +98,35 @@ export default function ProductReviewsModerationPage() {
         </div>
       </div>
 
-      {!loading && total > 0 && (
+      {total > 0 && (
         <div className="kpi-grid">
           <KpiCard label="Toplam Yorum" value={total} />
         </div>
       )}
+
+      <div className="filter-bar">
+        <input
+          className="input"
+          placeholder="Yorum metni veya yazar adına göre ara…"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+        />
+        <select
+          className="input filter-bar__select"
+          value={ratingFilter}
+          onChange={(e) => {
+            setRatingFilter(e.target.value);
+            setPage(1);
+          }}
+        >
+          <option value="">Tüm puanlar</option>
+          <option value="5">5★</option>
+          <option value="4">4★</option>
+          <option value="3">3★</option>
+          <option value="2">2★</option>
+          <option value="1">1★</option>
+        </select>
+      </div>
 
       {loading ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -89,8 +136,12 @@ export default function ProductReviewsModerationPage() {
         </div>
       ) : reviews.length === 0 ? (
         <div className="empty-state">
-          <strong>Henüz yorum çekilmedi</strong>
-          <p>Scraper bu ürün için ilk taramasını tamamladığında yorumlar burada listelenecek.</p>
+          <strong>{search || ratingFilter ? "Eşleşen yorum yok" : "Henüz yorum çekilmedi"}</strong>
+          <p>
+            {search || ratingFilter
+              ? "Arama veya puan filtresini değiştirmeyi deneyin."
+              : "Scraper bu ürün için ilk taramasını tamamladığında yorumlar burada listelenecek."}
+          </p>
         </div>
       ) : (
         <ul style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -153,10 +204,7 @@ export default function ProductReviewsModerationPage() {
         <div className="pagination">
           <button
             className="btn btn-secondary btn-sm"
-            onClick={() => {
-              setLoading(true);
-              setPage((p) => Math.max(1, p - 1));
-            }}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page <= 1}
           >
             ‹ Önceki
@@ -166,10 +214,7 @@ export default function ProductReviewsModerationPage() {
           </span>
           <button
             className="btn btn-secondary btn-sm"
-            onClick={() => {
-              setLoading(true);
-              setPage((p) => p + 1);
-            }}
+            onClick={() => setPage((p) => p + 1)}
             disabled={page >= totalPages}
           >
             Sonraki ›

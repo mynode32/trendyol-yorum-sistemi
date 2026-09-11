@@ -17,14 +17,31 @@ export async function GET(
     Math.max(1, Number(url.searchParams.get("pageSize")) || DEFAULT_PAGE_SIZE)
   );
 
+  const search = url.searchParams.get("search")?.trim();
+  const ratingParam = Number(url.searchParams.get("rating"));
+  const rating = Number.isInteger(ratingParam) && ratingParam >= 1 && ratingParam <= 5 ? ratingParam : undefined;
+
+  const where = {
+    productId: id,
+    ...(rating ? { rating } : {}),
+    ...(search
+      ? {
+          OR: [
+            { comment: { contains: search, mode: "insensitive" as const } },
+            { authorName: { contains: search, mode: "insensitive" as const } },
+          ],
+        }
+      : {}),
+  };
+
   const [data, total] = await Promise.all([
     prisma.review.findMany({
-      where: { productId: id },
+      where,
       orderBy: { reviewDate: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),
-    prisma.review.count({ where: { productId: id } }),
+    prisma.review.count({ where }),
   ]);
 
   return NextResponse.json({ data, pagination: { page, pageSize, total } });

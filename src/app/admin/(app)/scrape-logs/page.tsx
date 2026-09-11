@@ -1,7 +1,8 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { adminFetch } from "@/lib/adminFetch";
 import { KpiCard } from "../_components/KpiCard";
+import { useToast } from "../_components/Toast";
 
 type ScrapeLog = {
   id: string;
@@ -13,6 +14,8 @@ type ScrapeLog = {
   product: { name: string };
 };
 
+type StatusFilter = "all" | "success" | "failed";
+
 function StatusBadge({ status }: { status: string }) {
   if (status === "success") return <span className="badge badge-success">Başarılı</span>;
   if (status === "failed") return <span className="badge badge-danger">Başarısız</span>;
@@ -20,8 +23,10 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function ScrapeLogsPage() {
+  const { showToast } = useToast();
   const [logs, setLogs] = useState<ScrapeLog[] | null>(null);
-  const [error, setError] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   useEffect(() => {
     adminFetch("/api/admin/scrape-logs")
@@ -30,12 +35,23 @@ export default function ScrapeLogsPage() {
         return res.json();
       })
       .then((body) => setLogs(body.data))
-      .catch(() => setError(true));
+      .catch(() => showToast("Tarama kayıtları yüklenemedi. Sayfayı yenilemeyi deneyin.", "error"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const successCount = logs?.filter((l) => l.status === "success").length ?? 0;
   const failedCount = logs?.filter((l) => l.status === "failed").length ?? 0;
   const newReviewsTotal = logs?.reduce((sum, l) => sum + l.newReviews, 0) ?? 0;
+
+  const filteredLogs = useMemo(() => {
+    if (!logs) return [];
+    const term = searchText.trim().toLowerCase();
+    return logs.filter(
+      (l) =>
+        (statusFilter === "all" || l.status === statusFilter) &&
+        (!term || l.product.name.toLowerCase().includes(term))
+    );
+  }, [logs, searchText, statusFilter]);
 
   return (
     <div className="admin-page">
@@ -57,9 +73,27 @@ export default function ScrapeLogsPage() {
         </div>
       )}
 
-      {error ? (
-        <p className="alert alert-error">Tarama kayıtları yüklenemedi. Sayfayı yenilemeyi deneyin.</p>
-      ) : logs === null ? (
+      {logs && logs.length > 0 && (
+        <div className="filter-bar">
+          <input
+            className="input"
+            placeholder="Ürün adına göre ara…"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+          />
+          <select
+            className="input filter-bar__select"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+          >
+            <option value="all">Tüm durumlar</option>
+            <option value="success">Başarılı</option>
+            <option value="failed">Başarısız</option>
+          </select>
+        </div>
+      )}
+
+      {logs === null ? (
         <div className="skeleton" style={{ height: 240, borderRadius: "var(--radius-md)" }} />
       ) : logs.length === 0 ? (
         <div className="empty-state">
@@ -68,6 +102,11 @@ export default function ScrapeLogsPage() {
             Manuel tetiklemek için <code>npm run scrape:once -- &lt;trendyolProductId&gt;</code>{" "}
             komutunu kullanın.
           </p>
+        </div>
+      ) : filteredLogs.length === 0 ? (
+        <div className="empty-state">
+          <strong>Eşleşen kayıt yok</strong>
+          <p>Arama veya durum filtresini değiştirmeyi deneyin.</p>
         </div>
       ) : (
         <div className="table-wrap">
@@ -82,7 +121,7 @@ export default function ScrapeLogsPage() {
               </tr>
             </thead>
             <tbody>
-              {logs.map((log) => (
+              {filteredLogs.map((log) => (
                 <tr key={log.id}>
                   <td>{log.product.name}</td>
                   <td>
