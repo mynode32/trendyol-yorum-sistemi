@@ -69,6 +69,16 @@ export function SortIcon(props: IconProps & { direction?: "asc" | "desc" | null 
   );
 }
 
+export function AnalyticsIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M4 20V10" />
+      <path d="M11 20V4" />
+      <path d="M18 20v-7" />
+    </svg>
+  );
+}
+
 export function CheckCircleIcon(props: IconProps) {
   return (
     <svg {...base} {...props}>

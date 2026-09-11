@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { adminFetch } from "@/lib/adminFetch";
 import { KpiCard } from "../../../_components/KpiCard";
 import { useToast } from "../../../_components/Toast";
+import { RatingDistribution, TrendBadge } from "../../../_components/Analytics";
 
 type Review = {
   id: string;
@@ -13,6 +14,13 @@ type Review = {
   isHidden: boolean;
   isDisplayed: boolean;
   photoUrls: string[];
+};
+
+type ProductAnalytics = {
+  totalReviews: number;
+  averageRating: number | null;
+  ratingDistribution: Record<string, number>;
+  averageRatingChange30d: number | null;
 };
 
 const PAGE_SIZE = 50;
@@ -31,6 +39,7 @@ export default function ProductReviewsModerationPage() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [ratingFilter, setRatingFilter] = useState("");
+  const [analytics, setAnalytics] = useState<ProductAnalytics | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -63,6 +72,13 @@ export default function ProductReviewsModerationPage() {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id, page, search, ratingFilter]);
+
+  useEffect(() => {
+    adminFetch(`/api/admin/products/${params.id}/analytics`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body) => setAnalytics(body))
+      .catch(() => {});
+  }, [params.id]);
 
   async function toggleHidden(review: Review) {
     setReviews((prev) =>
@@ -101,6 +117,31 @@ export default function ProductReviewsModerationPage() {
       {total > 0 && (
         <div className="kpi-grid">
           <KpiCard label="Toplam Yorum" value={total} />
+          <KpiCard
+            label="Ortalama Puan"
+            value={analytics?.averageRating != null ? `★ ${analytics.averageRating.toFixed(2)}` : "—"}
+          />
+        </div>
+      )}
+
+      {analytics && analytics.totalReviews > 0 && (
+        <div className="analytics-grid" style={{ marginBottom: 24 }}>
+          <div className="card">
+            <h2 style={{ fontSize: 15, marginBottom: 4 }}>Puan Dağılımı</h2>
+            <p style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 14 }}>
+              Gizlenmemiş tüm yorumlar üzerinden.
+            </p>
+            <RatingDistribution distribution={analytics.ratingDistribution} total={analytics.totalReviews} />
+          </div>
+          <div className="card">
+            <h2 style={{ fontSize: 15, marginBottom: 4 }}>Son 30 Gün Trendi</h2>
+            <p style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 14 }}>
+              Önceki 30 güne göre ortalama puan değişimi.
+            </p>
+            <div style={{ fontSize: 22 }}>
+              <TrendBadge change={analytics.averageRatingChange30d} />
+            </div>
+          </div>
         </div>
       )}
 

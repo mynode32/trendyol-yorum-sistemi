@@ -1,10 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { LogoutIcon, LogsIcon, ProductsIcon, SettingsIcon } from "./icons";
+import { AnalyticsIcon, LogoutIcon, LogsIcon, ProductsIcon, SettingsIcon } from "./icons";
 
 const LINKS = [
   { href: "/admin/products", label: "Ürünler", Icon: ProductsIcon },
+  { href: "/admin/analytics", label: "Analytics", Icon: AnalyticsIcon },
   { href: "/admin/scrape-logs", label: "Scraper İzleme", Icon: LogsIcon },
   { href: "/admin/settings", label: "Ayarlar", Icon: SettingsIcon },
 ];
