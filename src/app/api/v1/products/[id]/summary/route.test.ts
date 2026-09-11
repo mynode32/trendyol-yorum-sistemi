@@ -43,6 +43,9 @@ describe("GET /api/v1/products/:id/summary", () => {
     expect(body.totalReviews).toBe(3);
     expect(body.averageRating).toBeCloseTo((5 + 5 + 1) / 3, 2);
     expect(body.ratingCounts).toMatchObject({ "1": 1, "2": 0, "3": 0, "4": 0, "5": 2 });
+    expect(response.headers.get("Cache-Control")).toBe(
+      "public, max-age=60, s-maxage=60, stale-while-revalidate=300"
+    );
   });
 
   it("pools ratings from sibling products sharing reviewGroupId + storeId", async () => {

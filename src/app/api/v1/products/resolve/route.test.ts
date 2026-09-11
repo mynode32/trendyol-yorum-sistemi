@@ -33,6 +33,9 @@ describe("GET /api/v1/products/resolve", () => {
 
     expect(response.status).toBe(200);
     expect(body).toEqual({ id: product.id });
+    expect(response.headers.get("Cache-Control")).toBe(
+      "public, max-age=60, s-maxage=60, stale-while-revalidate=300"
+    );
   });
 
   it("returns 404 when no product matches the given externalRef", async () => {
@@ -41,6 +44,7 @@ describe("GET /api/v1/products/resolve", () => {
     expect(response.status).toBe(404);
     const body = await response.json();
     expect(body.error.code).toBe("PRODUCT_NOT_FOUND");
+    expect(response.headers.get("Cache-Control")).toContain("s-maxage=60");
   });
 
   it("resolves when storeId is provided and matches the product's storeId", async () => {

@@ -45,6 +45,9 @@ describe("GET /api/v1/products/:id/reviews", () => {
     expect(body.data).toHaveLength(1);
     expect(body.data[0].trendyolReviewId).toBe("r1");
     expect(body.pagination).toMatchObject({ page: 1, pageSize: 20, total: 1 });
+    expect(response.headers.get("Cache-Control")).toBe(
+      "public, max-age=60, s-maxage=60, stale-while-revalidate=300"
+    );
   });
 
   it("sort=longest returns the globally longest reviews, not just the longest within a page", async () => {
@@ -163,5 +166,6 @@ describe("GET /api/v1/products/:id/reviews", () => {
     expect(response.status).toBe(404);
     const body = await response.json();
     expect(body.error.code).toBe("PRODUCT_NOT_FOUND");
+    expect(response.headers.get("Cache-Control")).toContain("s-maxage=60");
   });
 });
