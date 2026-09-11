@@ -10,6 +10,7 @@ describe("GET /api/v1/products/:id/summary", () => {
     await prisma.scrapeLog.deleteMany();
     await prisma.review.deleteMany();
     await prisma.product.deleteMany();
+    await prisma.user.deleteMany();
     await prisma.account.deleteMany();
     const account = await prisma.account.create({ data: { name: "test-account" } });
     accountId = account.id;
