@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/api/errors";
+import { getCurrentUser } from "@/lib/auth/currentUser";
 
 function isTrendyolUrl(trendyolUrl: string): boolean {
   try {
@@ -20,16 +21,24 @@ function extractProductId(trendyolUrl: string): string | null {
 
 const minRatingSchema = z.number().int().min(1).max(5).optional();
 
-export async function GET() {
+export async function GET(request: Request) {
+  const currentUser = await getCurrentUser(request);
+  if (!currentUser) return jsonError("UNAUTHORIZED", "Giriş yapmanız gerekiyor", 401);
+
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const accountId = currentUser.accountId;
 
   const [products, ratingAgg, newReviewsLast7Days] = await Promise.all([
     prisma.product.findMany({
+      where: { accountId },
       orderBy: { createdAt: "desc" },
       include: { _count: { select: { reviews: { where: { isDisplayed: true } } } } },
     }),
-    prisma.review.aggregate({ where: { isDisplayed: true }, _avg: { rating: true } }),
-    prisma.review.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
+    prisma.review.aggregate({
+      where: { isDisplayed: true, product: { accountId } },
+      _avg: { rating: true },
+    }),
+    prisma.review.count({ where: { createdAt: { gte: sevenDaysAgo }, product: { accountId } } }),
   ]);
 
   const data = products.map(({ _count, ...product }) => ({
@@ -40,6 +49,7 @@ export async function GET() {
   return NextResponse.json({
     data,
     summary: {
+      accountName: currentUser.accountName,
       averageRating: ratingAgg._avg.rating,
       newReviewsLast7Days,
     },
@@ -47,6 +57,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const currentUser = await getCurrentUser(request);
+  if (!currentUser) return jsonError("UNAUTHORIZED", "Giriş yapmanız gerekiyor", 401);
+
   let rawBody: unknown;
   try {
     rawBody = await request.json();
@@ -75,6 +88,7 @@ export async function POST(request: Request) {
   try {
     const product = await prisma.product.create({
       data: {
+        accountId: currentUser.accountId,
         trendyolProductId,
         trendyolUrl,
         name: `Ürün ${trendyolProductId}`,

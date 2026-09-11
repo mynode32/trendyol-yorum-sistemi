@@ -17,7 +17,27 @@ type SidebarProps = {
 
 type HealthStatus = "ok" | "degraded" | "down" | "loading";
 
-const storeName = process.env.NEXT_PUBLIC_STORE_NAME?.trim();
+function useCurrentAccount(): { accountName: string | null; email: string | null } {
+  const [accountName, setAccountName] = useState<string | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/admin/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: { accountName?: string; email?: string } | null) => {
+        if (cancelled || !body) return;
+        setAccountName(body.accountName ?? null);
+        setEmail(body.email ?? null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return { accountName, email };
+}
 
 function initialsOf(name: string): string {
   const parts = name.split(/\s+/).filter(Boolean);
@@ -60,13 +80,15 @@ function SystemStatus() {
 }
 
 export function Sidebar({ pathname, open, onClose, onLogout }: SidebarProps) {
+  const { accountName, email } = useCurrentAccount();
+
   return (
     <>
       {open && <div className="admin-sidebar__scrim" onClick={onClose} />}
       <aside className={`admin-sidebar${open ? " admin-sidebar--open" : ""}`}>
         <div className="admin-sidebar__brand">
           <span className="admin-sidebar__brand-app">Trendyol Yorum Sistemi</span>
-          {storeName && <span className="admin-sidebar__brand-store">{storeName}</span>}
+          {accountName && <span className="admin-sidebar__brand-store">{accountName}</span>}
         </div>
         <nav className="admin-sidebar__nav">
           {LINKS.map(({ href, label, Icon }) => (
@@ -85,11 +107,13 @@ export function Sidebar({ pathname, open, onClose, onLogout }: SidebarProps) {
         <SystemStatus />
         <div className="admin-sidebar__account">
           <div className="admin-sidebar__avatar" aria-hidden="true">
-            {initialsOf(storeName || "Yönetici")}
+            {initialsOf(accountName || "Yönetici")}
           </div>
           <div className="admin-sidebar__account-info">
-            <span className="admin-sidebar__account-name">{storeName || "Yönetici"}</span>
-            <span className="admin-sidebar__account-role">Admin Hesabı</span>
+            <span className="admin-sidebar__account-name">{accountName || "Yönetici"}</span>
+            <span className="admin-sidebar__account-role" title={email ?? undefined}>
+              Admin Hesabı
+            </span>
           </div>
         </div>
         <button type="button" className="admin-sidebar__logout" onClick={onLogout}>

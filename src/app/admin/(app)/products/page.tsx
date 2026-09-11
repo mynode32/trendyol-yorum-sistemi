@@ -21,6 +21,7 @@ type Product = {
 };
 
 type Summary = {
+  accountName: string;
   averageRating: number | null;
   newReviewsLast7Days: number;
 };
@@ -29,7 +30,6 @@ type StatusFilter = "all" | "tracked" | "stopped" | "unmatched";
 type SortKey = "name" | "lastScrapedAt";
 type SortDir = "asc" | "desc";
 
-const storeName = process.env.NEXT_PUBLIC_STORE_NAME?.trim();
 const PRODUCTS_PAGE_SIZE = 15;
 
 function widgetStatus(p: Product): { label: string; className: string } {
@@ -386,7 +386,7 @@ export default function ProductsPage() {
         <div className="hero-card">
           <div className="hero-card__greeting">
             <span className="hero-card__greeting-label">Hoş geldin</span>
-            <span className="hero-card__greeting-name">{storeName || "👋"}</span>
+            <span className="hero-card__greeting-name">{summary?.accountName || "👋"}</span>
           </div>
           <div className="hero-card__stats">
             <div className="hero-stat">

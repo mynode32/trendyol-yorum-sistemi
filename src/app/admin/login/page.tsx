@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -16,7 +17,7 @@ export default function LoginPage() {
       const res = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ email, password }),
       });
       if (res.ok) {
         router.push("/admin/products");
@@ -26,7 +27,7 @@ export default function LoginPage() {
       setError(
         body?.error?.code === "RATE_LIMITED"
           ? "Çok fazla başarısız deneme. Lütfen birkaç dakika sonra tekrar deneyin."
-          : "Şifre hatalı."
+          : "Email veya şifre hatalı."
       );
     } catch {
       setError("Sunucuya bağlanılamadı. İnternet bağlantınızı kontrol edin.");
@@ -51,6 +52,20 @@ export default function LoginPage() {
         </p>
         <h1 style={{ fontSize: 20, marginBottom: 20 }}>Admin Girişi</h1>
 
+        <div className="field" style={{ marginBottom: 14 }}>
+          <label htmlFor="email">Email</label>
+          <input
+            id="email"
+            type="email"
+            className="input"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="ornek@sirket.com"
+            autoFocus
+            required
+          />
+        </div>
+
         <div className="field">
           <label htmlFor="password">Şifre</label>
           <input
@@ -60,7 +75,6 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
-            autoFocus
             required
           />
         </div>

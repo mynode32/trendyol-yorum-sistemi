@@ -6,18 +6,18 @@ describe("session token", () => {
     process.env.SESSION_SECRET = "test-secret-32-characters-long!!";
   });
 
-  it("creates a token that verifies successfully", () => {
-    const token = createSessionToken();
-    expect(verifySessionToken(token)).toBe(true);
+  it("creates a token that verifies successfully and carries the user id", () => {
+    const token = createSessionToken("user_123");
+    expect(verifySessionToken(token)).toEqual({ userId: "user_123" });
   });
 
   it("rejects a tampered token", () => {
-    const token = createSessionToken();
-    expect(verifySessionToken(token + "tampered")).toBe(false);
+    const token = createSessionToken("user_123");
+    expect(verifySessionToken(token + "tampered")).toBeNull();
   });
 
   it("rejects garbage input", () => {
-    expect(verifySessionToken("not-a-real-token")).toBe(false);
+    expect(verifySessionToken("not-a-real-token")).toBeNull();
   });
 
   describe("expiry", () => {
@@ -29,16 +29,16 @@ describe("session token", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2026-09-08T00:00:00Z"));
 
-      const token = createSessionToken();
-      expect(verifySessionToken(token)).toBe(true);
+      const token = createSessionToken("user_123");
+      expect(verifySessionToken(token)).toEqual({ userId: "user_123" });
 
       // Süre sınırının hemen altında hâlâ geçerli
       vi.setSystemTime(new Date(Date.now() + MAX_SESSION_AGE_MS - 1000));
-      expect(verifySessionToken(token)).toBe(true);
+      expect(verifySessionToken(token)).toEqual({ userId: "user_123" });
 
       // Süre sınırı aşıldığında imza doğru olsa bile reddedilir
       vi.setSystemTime(new Date(Date.now() + 2000));
-      expect(verifySessionToken(token)).toBe(false);
+      expect(verifySessionToken(token)).toBeNull();
     });
   });
 });

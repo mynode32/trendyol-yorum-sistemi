@@ -19,9 +19,21 @@ Tasarım ve plan dokümanları:
 |---|---|
 | `DATABASE_URL` | PostgreSQL bağlantı adresi, örn. `postgresql://trendyol:trendyol@localhost:5432/trendyol_reviews`. Supabase kullanılıyorsa: pooled (pgbouncer, port 6543) bağlantı. |
 | `DIRECT_URL` | Migration'lar için doğrudan (havuzsuz) bağlantı adresi. Yerelde `DATABASE_URL` ile aynı olabilir; Supabase'de port 5432 olan bağlantı adresi kullanılır. |
-| `ADMIN_PASSWORD` | Admin paneline giriş şifresi (tek kullanıcı) |
 | `SESSION_SECRET` | Oturum cookie'sini imzalayan HMAC anahtarı; en az 32 karakterlik rastgele bir dize kullanın |
 | `SCRAPE_ALERT_WEBHOOK_URL` | Opsiyonel: başarısız scheduled scrape özetini JSON POST olarak alan alarm webhook'u |
+
+Sistem çoklu-hesap (multi-tenant): her müşteri kendi `Account`/`User` satırıyla
+kendi email/şifresiyle giriş yapar, sadece kendi ürünlerini görür. Yeni bir
+müşteri hesabı oluşturmak için:
+
+```bash
+npx tsx scripts/create-account.ts <email> <şifre> <hesap-adı>
+```
+
+Bu script hesabı+kullanıcıyı oluşturur ve o ana kadar hiçbir hesaba
+bağlanmamış (`accountId IS NULL`) ürünleri de bu hesaba bağlar — sadece ilk
+hesap için (geriye dönük göç) anlamlıdır, sonraki her müşteri için hesap
+boş başlar.
 
 Oturumlar 24 saat sonra sunucu tarafında geçersiz olur (`MAX_SESSION_AGE_MS`).
 `SESSION_SECRET` değiştirilirse mevcut tüm oturumlar anında geçersiz olur.
@@ -139,7 +151,8 @@ gösterir. `public/widget-demo.html` yerel deneme sayfasıdır
 
 ## Admin panel
 
-`/admin/products` (giriş: `/admin/login`, `ADMIN_PASSWORD` ile).
+`/admin/products` (giriş: `/admin/login`, email + şifre ile — bkz. yukarıdaki
+`scripts/create-account.ts`).
 
 - **Ürün Yönetimi:** Trendyol ürün URL'si yapıştırarak ürün ekleme (ID URL'deki
   `-p-<rakamlar>` deseninden çıkarılır), tek ürün için **Şimdi Tara**, takibi durdurma/başlatma, "Çıkış Yap".

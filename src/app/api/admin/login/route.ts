@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { timingSafeEqual } from "crypto";
 import { z } from "zod";
+import { prisma } from "@/lib/db";
+import { verifyPassword } from "@/lib/auth/password";
 import { createSessionToken, MAX_SESSION_AGE_MS } from "@/lib/auth/session";
 import { isRateLimited, registerFailedLoginAttempt, clearLoginAttempts } from "@/lib/auth/rateLimit";
 
@@ -8,14 +9,10 @@ function clientKey(request: Request): string {
   return request.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
 }
 
-const loginBodySchema = z.object({ password: z.string().min(1).max(1024) });
-
-function secureEqual(left: string, right: string | undefined): boolean {
-  if (!right) return false;
-  const leftBuffer = Buffer.from(left);
-  const rightBuffer = Buffer.from(right);
-  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
-}
+const loginBodySchema = z.object({
+  email: z.string().trim().min(1).max(320),
+  password: z.string().min(1).max(1024),
+});
 
 export async function POST(request: Request) {
   const key = clientKey(request);
@@ -39,21 +36,24 @@ export async function POST(request: Request) {
   const parsed = loginBodySchema.safeParse(rawBody);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: { code: "INVALID_BODY", message: "Şifre alanı geçerli olmalı" } },
+      { error: { code: "INVALID_BODY", message: "Email ve şifre alanları geçerli olmalı" } },
       { status: 400 }
     );
   }
 
-  if (!secureEqual(parsed.data.password, process.env.ADMIN_PASSWORD)) {
+  const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
+  const passwordValid = user ? await verifyPassword(parsed.data.password, user.passwordHash) : false;
+
+  if (!user || !passwordValid) {
     registerFailedLoginAttempt(key);
     return NextResponse.json(
-      { error: { code: "INVALID_CREDENTIALS", message: "Şifre hatalı" } },
+      { error: { code: "INVALID_CREDENTIALS", message: "Email veya şifre hatalı" } },
       { status: 401 }
     );
   }
 
   clearLoginAttempts(key);
-  const token = createSessionToken();
+  const token = createSessionToken(user.id);
   const response = NextResponse.json({ ok: true });
   response.cookies.set("ty_admin_session", token, {
     httpOnly: true,
