@@ -23,15 +23,36 @@ Tasarım ve plan dokümanları:
 | `SCRAPE_ALERT_WEBHOOK_URL` | Opsiyonel: başarısız scheduled scrape özetini JSON POST olarak alan alarm webhook'u |
 
 Sistem çoklu-hesap (multi-tenant): her müşteri kendi `Account`/`User` satırıyla
-kendi email/şifresiyle giriş yapar, sadece kendi ürünlerini görür. Yeni bir
-müşteri hesabı oluşturmak için:
+kendi email/şifresiyle giriş yapar, sadece kendi ürünlerini görür.
 
-```bash
-npx tsx scripts/create-account.ts <email> <şifre> <hesap-adı>
-```
+### Yeni müşteri ekleme
 
-Bu script hesabı+kullanıcıyı oluşturur; hesap ürünsüz başlar, ürünler admin
-panelinden eklenir.
+1. **Hesabı oluştur** (bu bilgisayarda, production `DIRECT_URL`'i ile):
+   ```bash
+   npx tsx scripts/create-account.ts <email> <şifre> <hesap-adı>
+   ```
+   Hesap ve ilk kullanıcı oluşur, ürünsüz başlar.
+2. **Ürünleri ekle** — iki yoldan biri:
+   - Müşteri kendi giriş bilgileriyle `/admin/products`'a girip Trendyol ürün
+     URL'lerini tek tek yapıştırır, veya
+   - Sen bu bilgisayarda mağazanın tamamını tek seferde çekersin:
+     ```bash
+     npm run bulk-import -- <hesap-email> <mağaza-linki> [mağaza-etiketi] [minPuan]
+     ```
+3. **Giriş bilgilerini ilet** — email + belirlediğin şifreyi müşteriye ayrıca
+   (WhatsApp/e-posta vb.) gönder; panelden şifresini kendisi değiştirebilir
+   (`/admin/settings`).
+4. **Tarama otomatik başlar** — yeni ürünler, zaten çalışan tek paylaşımlı
+   worker'ın (`npm run scheduler:start`, her 3 saatte bir) taradığı listeye
+   otomatik dahil olur; müşteri başına ayrı bir worker kurulumu gerekmez.
+5. **Widget kodunu ver** — admin panelde her ürünün "Widget kodu" butonu,
+   müşterinin kendi sitesine yapıştıracağı `<script>` etiketini verir.
+
+Tek worker tüm hesapların ürünlerini sırayla tarar (bkz. "Scraper" bölümü) —
+bu, tek bir residential-IP makineye bağlı bir kapasite sınırıdır. Müşteri
+sayısı arttıkça taramalar 3 saatlik pencereye sığmayabilir; o noktada ikinci
+bir worker makinesi (aynı `DATABASE_URL`'e bağlı, ayrı bir residential IP)
+eklemek gerekir.
 
 Oturumlar 24 saat sonra sunucu tarafında geçersiz olur (`MAX_SESSION_AGE_MS`).
 `SESSION_SECRET` değiştirilirse mevcut tüm oturumlar anında geçersiz olur.
