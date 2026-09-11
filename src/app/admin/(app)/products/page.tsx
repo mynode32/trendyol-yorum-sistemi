@@ -30,6 +30,7 @@ type SortKey = "name" | "lastScrapedAt";
 type SortDir = "asc" | "desc";
 
 const storeName = process.env.NEXT_PUBLIC_STORE_NAME?.trim();
+const PRODUCTS_PAGE_SIZE = 15;
 
 function widgetStatus(p: Product): { label: string; className: string } {
   if (!p.isTracked) return { label: "Durduruldu", className: "badge-neutral" };
@@ -78,6 +79,7 @@ export default function ProductsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkRunning, setBulkRunning] = useState(false);
 
@@ -108,16 +110,33 @@ export default function ProductsPage() {
     const filtered = products.filter(
       (p) => matchesStatus(p, statusFilter) && (!term || p.name.toLowerCase().includes(term))
     );
-    if (!sortKey) return filtered;
-    const sorted = [...filtered].sort((a, b) => {
-      if (sortKey === "name") return a.name.localeCompare(b.name, "tr");
-      const aTime = a.lastScrapedAt ? new Date(a.lastScrapedAt).getTime() : 0;
-      const bTime = b.lastScrapedAt ? new Date(b.lastScrapedAt).getTime() : 0;
-      return aTime - bTime;
+    if (sortKey) {
+      const sorted = [...filtered].sort((a, b) => {
+        if (sortKey === "name") return a.name.localeCompare(b.name, "tr");
+        const aTime = a.lastScrapedAt ? new Date(a.lastScrapedAt).getTime() : 0;
+        const bTime = b.lastScrapedAt ? new Date(b.lastScrapedAt).getTime() : 0;
+        return aTime - bTime;
+      });
+      if (sortDir === "desc") sorted.reverse();
+      return sorted;
+    }
+    // Varsayılan sırada, "Ürün serisi" (reviewGroupId) paylaşan ürünler (farklı
+    // boy/beden varyantları) yan yana görünsün diye gruplanır — ürün serisi
+    // olmayanlar orijinal (en yeni eklenen önce) sırasını korur.
+    return [...filtered].sort((a, b) => {
+      if (a.reviewGroupId && a.reviewGroupId === b.reviewGroupId) return 0;
+      if (!a.reviewGroupId && !b.reviewGroupId) return 0;
+      if (!a.reviewGroupId) return -1;
+      if (!b.reviewGroupId) return 1;
+      return a.reviewGroupId.localeCompare(b.reviewGroupId, "tr");
     });
-    if (sortDir === "desc") sorted.reverse();
-    return sorted;
   }, [products, searchText, statusFilter, sortKey, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PAGE_SIZE));
+  const pagedProducts = useMemo(
+    () => filteredProducts.slice((page - 1) * PRODUCTS_PAGE_SIZE, page * PRODUCTS_PAGE_SIZE),
+    [filteredProducts, page]
+  );
 
   function toggleSort(key: SortKey) {
     if (sortKey !== key) {
@@ -126,6 +145,7 @@ export default function ProductsPage() {
     } else {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     }
+    setPage(1);
   }
 
   function toggleSelected(id: string) {
@@ -471,12 +491,18 @@ export default function ProductsPage() {
             className="input"
             placeholder="Ürün adına göre ara…"
             value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
+            onChange={(e) => {
+              setSearchText(e.target.value);
+              setPage(1);
+            }}
           />
           <select
             className="input filter-bar__select"
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+            onChange={(e) => {
+              setStatusFilter(e.target.value as StatusFilter);
+              setPage(1);
+            }}
           >
             <option value="all">Tüm durumlar</option>
             <option value="tracked">Takip ediliyor</option>
@@ -525,6 +551,7 @@ export default function ProductsPage() {
           <p>Arama veya filtre kriterlerini değiştirmeyi deneyin.</p>
         </div>
       ) : (
+        <>
         <div className="table-wrap">
           <table>
             <thead>
@@ -558,8 +585,13 @@ export default function ProductsPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredProducts.map((p) => (
+              {pagedProducts.map((p, index) => (
                 <Fragment key={p.id}>
+                {!sortKey && p.reviewGroupId && p.reviewGroupId !== pagedProducts[index - 1]?.reviewGroupId && (
+                  <tr className="table-group-row">
+                    <td colSpan={9}>Ürün serisi: {p.reviewGroupId}</td>
+                  </tr>
+                )}
                 <tr>
                   <td>
                     <input
@@ -749,6 +781,28 @@ export default function ProductsPage() {
             </tbody>
           </table>
         </div>
+        {totalPages > 1 && (
+          <div className="pagination">
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+            >
+              ‹ Önceki
+            </button>
+            <span>
+              Sayfa {page} / {totalPages} · {filteredProducts.length} ürün
+            </span>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+            >
+              Sonraki ›
+            </button>
+          </div>
+        )}
+        </>
       )}
     </div>
   );

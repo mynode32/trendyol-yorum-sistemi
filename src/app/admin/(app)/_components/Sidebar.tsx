@@ -1,3 +1,5 @@
+"use client";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { LogoutIcon, LogsIcon, ProductsIcon } from "./icons";
 
@@ -13,6 +15,8 @@ type SidebarProps = {
   onLogout: () => void;
 };
 
+type HealthStatus = "ok" | "degraded" | "down" | "loading";
+
 const storeName = process.env.NEXT_PUBLIC_STORE_NAME?.trim();
 
 function initialsOf(name: string): string {
@@ -20,6 +24,39 @@ function initialsOf(name: string): string {
   if (parts.length === 0) return "Y";
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
+const STATUS_LABEL: Record<HealthStatus, string> = {
+  ok: "Sistem Aktif",
+  degraded: "Gecikme Var",
+  down: "Bağlantı Yok",
+  loading: "Kontrol ediliyor…",
+};
+
+function SystemStatus() {
+  const [status, setStatus] = useState<HealthStatus>("loading");
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/admin/health")
+      .then((res) => res.json())
+      .then((body: { status?: string }) => {
+        if (!cancelled) setStatus(body.status === "ok" || body.status === "degraded" ? body.status : "down");
+      })
+      .catch(() => {
+        if (!cancelled) setStatus("down");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <div className="admin-sidebar__status">
+      <span className={`admin-sidebar__status-dot admin-sidebar__status-dot--${status}`} />
+      <span>{STATUS_LABEL[status]}</span>
+    </div>
+  );
 }
 
 export function Sidebar({ pathname, open, onClose, onLogout }: SidebarProps) {
@@ -45,6 +82,7 @@ export function Sidebar({ pathname, open, onClose, onLogout }: SidebarProps) {
             </Link>
           ))}
         </nav>
+        <SystemStatus />
         <div className="admin-sidebar__account">
           <div className="admin-sidebar__avatar" aria-hidden="true">
             {initialsOf(storeName || "Yönetici")}
