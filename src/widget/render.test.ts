@@ -102,7 +102,10 @@ describe("renderReviewWidget", () => {
     await renderReviewWidget(container, { apiBaseUrl: "http://localhost", productId: "prod-1" });
 
     expect(container.shadowRoot!.querySelector("script")).toBeNull();
-    expect(container.shadowRoot!.querySelector("img")).toBeNull();
+    // Yorumun kendisinde fotoğraf yok; DOM'da yalnızca (boş, gizli) lightbox
+    // önizleme img'i bulunmalı, yorum metninden enjekte edilmiş bir <img> değil.
+    expect(container.shadowRoot!.querySelectorAll("img").length).toBe(1);
+    expect(container.shadowRoot!.querySelector('[data-role="lightbox-img"]')).not.toBeNull();
     expect(container.shadowRoot!.innerHTML).toContain("&lt;script&gt;");
   });
 
@@ -201,6 +204,55 @@ describe("renderReviewWidget", () => {
     const img = container.shadowRoot!.querySelector<HTMLImageElement>(".ty-widget__item img");
     expect(img).not.toBeNull();
     expect(img!.src).toBe("https://example.com/photo1.jpg");
+  });
+
+  it("opens a detail overlay when a review item is clicked, and a full-size lightbox when its photo is clicked", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.includes("/summary")) {
+          return Promise.resolve(new Response(JSON.stringify({ averageRating: 5, totalReviews: 1 })));
+        }
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [
+                {
+                  id: "1",
+                  rating: 5,
+                  comment: "Harika ürün, çok memnun kaldık",
+                  authorName: "A",
+                  hasPhoto: true,
+                  photoUrls: ["https://example.com/photo1.jpg"],
+                  reviewDate: "2026-01-01",
+                },
+              ],
+              pagination: { page: 1, pageSize: 20, total: 1 },
+            })
+          )
+        );
+      })
+    );
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    await renderReviewWidget(container, { apiBaseUrl: "http://localhost", productId: "prod-1" });
+    const root = container.shadowRoot!;
+
+    const detailOverlay = root.querySelector<HTMLElement>('[data-role="detail-overlay"]')!;
+    const lightboxOverlay = root.querySelector<HTMLElement>('[data-role="lightbox-overlay"]')!;
+    expect(detailOverlay.hidden).toBe(true);
+    expect(lightboxOverlay.hidden).toBe(true);
+
+    root.querySelector<HTMLElement>(".ty-widget__item")!.click();
+    expect(detailOverlay.hidden).toBe(false);
+    expect(root.querySelector('[data-role="modal-comment"]')!.textContent).toBe("Harika ürün, çok memnun kaldık");
+
+    root.querySelector<HTMLImageElement>('[data-role="modal-photo"]')!.click();
+    expect(lightboxOverlay.hidden).toBe(false);
+    expect(root.querySelector<HTMLImageElement>('[data-role="lightbox-img"]')!.src).toBe(
+      "https://example.com/photo1.jpg"
+    );
   });
 
   it("passes storeId through to the resolve call when provided", async () => {

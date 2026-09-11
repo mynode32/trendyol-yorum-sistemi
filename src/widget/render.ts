@@ -78,7 +78,23 @@ function injectStylesOnce(root: ShadowRoot) {
     .ty-widget__rating-row-fill { display: block; height: 100%; background: var(--ty-accent, #ff9500); }
     .ty-widget__rating-row-count { width: 24px; text-align: right; }
     .ty-widget__item-photos { display: flex; gap: 6px; margin-top: 6px; }
-    .ty-widget__item-photo { width: 56px; height: 56px; object-fit: cover; border-radius: 6px; }
+    .ty-widget__item-photo { width: 56px; height: 56px; object-fit: cover; border-radius: 6px; cursor: zoom-in; }
+    .ty-widget__item { cursor: pointer; }
+    .ty-widget__overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex;
+      align-items: center; justify-content: center; z-index: 2147483000; padding: 20px; }
+    .ty-widget__overlay[hidden] { display: none; }
+    .ty-widget__modal { background: #fff; border-radius: 10px; padding: 20px; max-width: 480px; width: 100%;
+      max-height: 80vh; overflow-y: auto; }
+    .ty-widget__modal-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .ty-widget__modal-comment { color: #333; line-height: 1.6; white-space: pre-wrap; }
+    .ty-widget__modal-photos { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .ty-widget__modal-photo { width: 130px; height: 130px; object-fit: cover; border-radius: 8px; cursor: zoom-in; }
+    .ty-widget__modal-close { margin-top: 16px; padding: 6px 14px; border: 1px solid #ccc; border-radius: 6px;
+      background: #f6f6f6; cursor: pointer; }
+    .ty-widget__lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex;
+      align-items: center; justify-content: center; z-index: 2147483001; padding: 20px; cursor: zoom-out; }
+    .ty-widget__lightbox[hidden] { display: none; }
+    .ty-widget__lightbox-img { max-width: 100%; max-height: 100%; border-radius: 8px; }
     .ty-widget__filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
       padding: 10px 12px; background: #f6f6f6; border-radius: 8px; margin-bottom: 12px; font-size: 13px; }
     .ty-widget__stars { display: flex; gap: 6px; border: none; padding: 0; margin: 0; }
@@ -223,7 +239,7 @@ function renderReviewItemsHtml(reviews: ReviewItem[]): string {
         .map((url) => `<img src="${escapeHtml(url)}" alt="" loading="lazy" class="ty-widget__item-photo">`)
         .join("");
       return `
-        <li class="ty-widget__item">
+        <li class="ty-widget__item" data-review-id="${escapeHtml(r.id)}">
           ${renderStars(r.rating)}
           <span class="ty-widget__item-author">${escapeHtml(r.authorName)}:</span>
           ${escapeHtml(r.comment)}
@@ -231,6 +247,21 @@ function renderReviewItemsHtml(reviews: ReviewItem[]): string {
         </li>`;
     })
     .join("");
+}
+
+function renderOverlaysHtml(): string {
+  return `
+    <div class="ty-widget__overlay" data-role="detail-overlay" hidden>
+      <div class="ty-widget__modal">
+        <div class="ty-widget__modal-header" data-role="modal-header"></div>
+        <div class="ty-widget__modal-comment" data-role="modal-comment"></div>
+        <div class="ty-widget__modal-photos" data-role="modal-photos"></div>
+        <button type="button" class="ty-widget__modal-close" data-action="close-detail">Kapat</button>
+      </div>
+    </div>
+    <div class="ty-widget__lightbox" data-role="lightbox-overlay" hidden>
+      <img class="ty-widget__lightbox-img" data-role="lightbox-img" alt="Yorum fotoğrafı">
+    </div>`;
 }
 
 function renderReviewItems(reviews: ReviewItem[], carousel?: boolean): string {
@@ -306,13 +337,66 @@ export async function renderReviewWidget(container: HTMLElement, options: Widget
     return;
   }
 
-  root.innerHTML = renderShell(summary, { hideFilters, storeUrl, carousel, hideSummary });
+  root.innerHTML = renderShell(summary, { hideFilters, storeUrl, carousel, hideSummary }) + renderOverlaysHtml();
   injectStylesOnce(root);
 
   const listEl = root.querySelector<HTMLUListElement>('[data-role="list"]')!;
   const pageInfoEl = root.querySelector<HTMLElement>('[data-role="page-info"]');
   const prevBtn = root.querySelector<HTMLButtonElement>('[data-action="prev"]');
   const nextBtn = root.querySelector<HTMLButtonElement>('[data-action="next"]');
+
+  const detailOverlay = root.querySelector<HTMLElement>('[data-role="detail-overlay"]')!;
+  const modalHeader = root.querySelector<HTMLElement>('[data-role="modal-header"]')!;
+  const modalComment = root.querySelector<HTMLElement>('[data-role="modal-comment"]')!;
+  const modalPhotos = root.querySelector<HTMLElement>('[data-role="modal-photos"]')!;
+  const lightboxOverlay = root.querySelector<HTMLElement>('[data-role="lightbox-overlay"]')!;
+  const lightboxImg = root.querySelector<HTMLImageElement>('[data-role="lightbox-img"]')!;
+
+  let reviewsById = new Map<string, ReviewItem>();
+  function indexReviews(reviews: ReviewItem[]) {
+    reviewsById = new Map(reviews.map((r) => [r.id, r]));
+  }
+
+  function openLightbox(url: string) {
+    lightboxImg.src = url;
+    lightboxOverlay.hidden = false;
+  }
+  function closeLightbox() {
+    lightboxOverlay.hidden = true;
+    lightboxImg.src = "";
+  }
+  function openDetail(review: ReviewItem) {
+    modalHeader.innerHTML = `${renderStars(review.rating)}<span class="ty-widget__item-author">${escapeHtml(review.authorName)}</span>`;
+    modalComment.textContent = review.comment;
+    modalPhotos.innerHTML = (review.photoUrls ?? [])
+      .map((url) => `<img src="${escapeHtml(url)}" class="ty-widget__modal-photo" data-role="modal-photo" alt="">`)
+      .join("");
+    detailOverlay.hidden = false;
+  }
+  function closeDetail() {
+    detailOverlay.hidden = true;
+  }
+
+  detailOverlay.addEventListener("click", (e) => {
+    if (e.target === detailOverlay) closeDetail();
+  });
+  root.querySelector('[data-action="close-detail"]')?.addEventListener("click", closeDetail);
+  lightboxOverlay.addEventListener("click", closeLightbox);
+  modalPhotos.addEventListener("click", (e) => {
+    const img = (e.target as HTMLElement).closest<HTMLImageElement>('[data-role="modal-photo"]');
+    if (img) openLightbox(img.src);
+  });
+  listEl.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement;
+    const photoImg = target.closest<HTMLImageElement>(".ty-widget__item-photo");
+    if (photoImg) {
+      openLightbox(photoImg.src);
+      return;
+    }
+    const item = target.closest<HTMLElement>(".ty-widget__item[data-review-id]");
+    const review = item ? reviewsById.get(item.dataset.reviewId!) : undefined;
+    if (review) openDetail(review);
+  });
 
   function applyPagination(pagination: ReviewsResponse["pagination"]) {
     if (!pageInfoEl || !prevBtn || !nextBtn) return;
@@ -328,6 +412,7 @@ export async function renderReviewWidget(container: HTMLElement, options: Widget
       const res = await fetch(`${apiBaseUrl}/api/v1/products/${encodedProductId}/reviews?${buildQueryString(state)}`);
       if (!res.ok) throw new Error("API'den başarısız yanıt");
       const body: ReviewsResponse = await res.json();
+      indexReviews(body.data);
       listEl.innerHTML = renderReviewItems(body.data, carousel);
       applyPagination(body.pagination);
     } catch {
@@ -391,6 +476,7 @@ export async function renderReviewWidget(container: HTMLElement, options: Widget
     void loadReviews();
   });
 
+  indexReviews(initialReviews.data);
   listEl.innerHTML = renderReviewItems(initialReviews.data, carousel);
   applyPagination(initialReviews.pagination);
 }
