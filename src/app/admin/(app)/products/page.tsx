@@ -455,36 +455,6 @@ export default function ProductsPage() {
         </button>
       </form>
 
-      <p
-        style={{
-          fontSize: 13,
-          color: "var(--text-muted)",
-          background: "var(--surface-muted)",
-          border: "1px solid var(--border)",
-          borderRadius: "var(--radius-sm)",
-          padding: "10px 14px",
-          marginBottom: 20,
-        }}
-      >
-        Bir mağazanın tüm ürünlerini tek seferde eklemek için, bu bilgisayarda:{" "}
-        <code>npm run bulk-import -- &lt;mağaza-linki&gt; &lt;mağaza-etiketi&gt;</code>
-      </p>
-
-      <p
-        style={{
-          fontSize: 13,
-          color: "var(--text-muted)",
-          background: "var(--surface-muted)",
-          border: "1px solid var(--border)",
-          borderRadius: "var(--radius-sm)",
-          padding: "10px 14px",
-          marginBottom: 20,
-        }}
-      >
-        Yorumlar bu bilgisayarda 7/24 çalışan worker tarafından her 3 saatte bir otomatik güncellenir, elle tetikleme
-        gerekmez.
-      </p>
-
       {!loading && products.length > 0 && (
         <div className="filter-bar">
           <input

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/api/errors";
 import { syncDisplayedReviews } from "@/lib/scraper/displaySync";
+import { getCurrentUser } from "@/lib/auth/currentUser";
 
 const patchBodySchema = z.object({ isHidden: z.boolean() });
 
@@ -11,6 +12,9 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const currentUser = await getCurrentUser(request);
+  if (!currentUser) return jsonError("UNAUTHORIZED", "Giriş yapmanız gerekiyor", 401);
+
   const { id } = await params;
 
   let rawBody: unknown;
@@ -25,6 +29,12 @@ export async function PATCH(
     return jsonError("INVALID_BODY", "isHidden alanı boolean olmalı", 400);
   }
   const { isHidden } = parsed.data;
+
+  const owned = await prisma.review.findFirst({
+    where: { id, product: { accountId: currentUser.accountId } },
+    select: { id: true },
+  });
+  if (!owned) return jsonError("NOT_FOUND", "Yorum bulunamadı", 404);
 
   try {
     const review = await prisma.review.update({

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/api/errors";
 import { discoverSellerProductIds } from "@/lib/scraper/trendyolClient";
+import { getCurrentUser } from "@/lib/auth/currentUser";
 
 function isTrendyolUrl(url: string): boolean {
   try {
@@ -20,6 +21,9 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: Request) {
+  const currentUser = await getCurrentUser(request);
+  if (!currentUser) return jsonError("UNAUTHORIZED", "Giriş yapmanız gerekiyor", 401);
+
   let rawBody: unknown;
   try {
     rawBody = await request.json();
@@ -56,6 +60,7 @@ export async function POST(request: Request) {
   if (newIds.length > 0) {
     await prisma.product.createMany({
       data: newIds.map((id) => ({
+        accountId: currentUser.accountId,
         trendyolProductId: id,
         trendyolUrl: `https://www.trendyol.com/urun-p-${id}`,
         name: `Ürün ${id}`,

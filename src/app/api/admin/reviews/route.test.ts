@@ -1,28 +1,62 @@
 import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
 import { prisma } from "@/lib/db";
+import { createSessionToken } from "@/lib/auth/session";
 import { PATCH } from "./[id]/route";
+
+let accountId: string;
+let otherAccountId: string;
+let sessionCookie: string;
+
+function authedRequest(url: string, init: RequestInit = {}) {
+  return new Request(url, {
+    ...init,
+    headers: { ...init.headers, cookie: `ty_admin_session=${sessionCookie}` },
+  });
+}
 
 describe("PATCH /api/admin/reviews/:id", () => {
   beforeEach(async () => {
+    process.env.SESSION_SECRET = "test-secret-32-characters-long!!";
+
     // ScrapeLog önce silinmeli — bkz. Task 9 fix round 1 notu.
     await prisma.scrapeLog.deleteMany();
     await prisma.review.deleteMany();
     await prisma.product.deleteMany();
+    await prisma.user.deleteMany();
+    await prisma.account.deleteMany();
+
+    const account = await prisma.account.create({ data: { name: "test-account" } });
+    accountId = account.id;
+    const otherAccount = await prisma.account.create({ data: { name: "other-account" } });
+    otherAccountId = otherAccount.id;
+    const user = await prisma.user.create({
+      data: { accountId, email: "owner@example.com", passwordHash: "irrelevant-for-these-tests" },
+    });
+    sessionCookie = createSessionToken(user.id);
   });
 
   afterAll(async () => {
     await prisma.$disconnect();
   });
 
+  it("returns 401 UNAUTHORIZED without a valid session", async () => {
+    const request = new Request("http://localhost/api/admin/reviews/does-not-matter", {
+      method: "PATCH",
+      body: JSON.stringify({ isHidden: true }),
+    });
+    const response = await PATCH(request, { params: Promise.resolve({ id: "does-not-matter" }) });
+    expect(response.status).toBe(401);
+  });
+
   it("toggles isHidden on a review", async () => {
     const product = await prisma.product.create({
-      data: { trendyolProductId: "p1", trendyolUrl: "https://x", name: "Ürün" },
+      data: { accountId, trendyolProductId: "p1", trendyolUrl: "https://x", name: "Ürün" },
     });
     const review = await prisma.review.create({
       data: { productId: product.id, trendyolReviewId: "r1", rating: 5, comment: "a", authorName: "A", reviewDate: new Date() },
     });
 
-    const request = new Request(`http://localhost/api/admin/reviews/${review.id}`, {
+    const request = authedRequest(`http://localhost/api/admin/reviews/${review.id}`, {
       method: "PATCH",
       body: JSON.stringify({ isHidden: true }),
     });
@@ -33,9 +67,28 @@ describe("PATCH /api/admin/reviews/:id", () => {
     expect(body.isHidden).toBe(true);
   });
 
+  it("returns 404 instead of touching a review that belongs to another account", async () => {
+    const otherProduct = await prisma.product.create({
+      data: { accountId: otherAccountId, trendyolProductId: "p1", trendyolUrl: "https://x", name: "Başka hesabın ürünü" },
+    });
+    const otherReview = await prisma.review.create({
+      data: { productId: otherProduct.id, trendyolReviewId: "r1", rating: 5, comment: "a", authorName: "A", reviewDate: new Date() },
+    });
+
+    const request = authedRequest(`http://localhost/api/admin/reviews/${otherReview.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ isHidden: true }),
+    });
+    const response = await PATCH(request, { params: Promise.resolve({ id: otherReview.id }) });
+
+    expect(response.status).toBe(404);
+    const unchanged = await prisma.review.findUnique({ where: { id: otherReview.id } });
+    expect(unchanged?.isHidden).toBe(false);
+  });
+
   it("promotes the next eligible review into the display cap when the shown one is hidden", async () => {
     const product = await prisma.product.create({
-      data: { trendyolProductId: "p1", trendyolUrl: "https://x", name: "Ürün", maxDisplayedReviews: 1 },
+      data: { accountId, trendyolProductId: "p1", trendyolUrl: "https://x", name: "Ürün", maxDisplayedReviews: 1 },
     });
     const shown = await prisma.review.create({
       data: { productId: product.id, trendyolReviewId: "r-shown", rating: 5, comment: "a", authorName: "A", reviewDate: new Date("2026-01-02"), isDisplayed: true },
@@ -44,7 +97,7 @@ describe("PATCH /api/admin/reviews/:id", () => {
       data: { productId: product.id, trendyolReviewId: "r-waiting", rating: 5, comment: "b", authorName: "B", reviewDate: new Date("2026-01-01"), isDisplayed: false },
     });
 
-    const request = new Request(`http://localhost/api/admin/reviews/${shown.id}`, {
+    const request = authedRequest(`http://localhost/api/admin/reviews/${shown.id}`, {
       method: "PATCH",
       body: JSON.stringify({ isHidden: true }),
     });
@@ -59,13 +112,13 @@ describe("PATCH /api/admin/reviews/:id", () => {
 
   it("returns 400 INVALID_BODY instead of 500 when isHidden is not a boolean", async () => {
     const product = await prisma.product.create({
-      data: { trendyolProductId: "p1", trendyolUrl: "https://x", name: "Ürün" },
+      data: { accountId, trendyolProductId: "p1", trendyolUrl: "https://x", name: "Ürün" },
     });
     const review = await prisma.review.create({
       data: { productId: product.id, trendyolReviewId: "r1", rating: 5, comment: "a", authorName: "A", reviewDate: new Date() },
     });
 
-    const request = new Request(`http://localhost/api/admin/reviews/${review.id}`, {
+    const request = authedRequest(`http://localhost/api/admin/reviews/${review.id}`, {
       method: "PATCH",
       body: JSON.stringify({ isHidden: "evet" }),
     });
@@ -77,7 +130,7 @@ describe("PATCH /api/admin/reviews/:id", () => {
   });
 
   it("returns 400 INVALID_BODY instead of 500 for malformed JSON", async () => {
-    const request = new Request("http://localhost/api/admin/reviews/does-not-matter", {
+    const request = authedRequest("http://localhost/api/admin/reviews/does-not-matter", {
       method: "PATCH",
       body: "{not json",
     });
@@ -89,7 +142,7 @@ describe("PATCH /api/admin/reviews/:id", () => {
   });
 
   it("returns 404 instead of 500 for an unknown review id", async () => {
-    const request = new Request("http://localhost/api/admin/reviews/does-not-exist", {
+    const request = authedRequest("http://localhost/api/admin/reviews/does-not-exist", {
       method: "PATCH",
       body: JSON.stringify({ isHidden: true }),
     });
@@ -102,7 +155,7 @@ describe("PATCH /api/admin/reviews/:id", () => {
 
   it("does not misreport an unrelated DB error as 404 NOT_FOUND", async () => {
     const product = await prisma.product.create({
-      data: { trendyolProductId: "p1", trendyolUrl: "https://x", name: "Ürün" },
+      data: { accountId, trendyolProductId: "p1", trendyolUrl: "https://x", name: "Ürün" },
     });
     const review = await prisma.review.create({
       data: { productId: product.id, trendyolReviewId: "r1", rating: 5, comment: "a", authorName: "A", reviewDate: new Date() },
@@ -111,7 +164,7 @@ describe("PATCH /api/admin/reviews/:id", () => {
       .spyOn(prisma.review, "update")
       .mockRejectedValueOnce(new Error("bağlantı koptu"));
 
-    const request = new Request(`http://localhost/api/admin/reviews/${review.id}`, {
+    const request = authedRequest(`http://localhost/api/admin/reviews/${review.id}`, {
       method: "PATCH",
       body: JSON.stringify({ isHidden: true }),
     });

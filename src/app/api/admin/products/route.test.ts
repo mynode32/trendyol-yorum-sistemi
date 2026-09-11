@@ -263,7 +263,7 @@ describe("/api/admin/products", () => {
       data: { accountId, trendyolProductId: "p1", trendyolUrl: "https://x", name: "Ürün" },
     });
 
-    const request = new Request(`http://localhost/api/admin/products/${product.id}`, {
+    const request = authedRequest(`http://localhost/api/admin/products/${product.id}`, {
       method: "PATCH",
       body: JSON.stringify({ isTracked: "evet" }),
     });
@@ -309,7 +309,7 @@ describe("/api/admin/products", () => {
       data: { accountId, trendyolProductId: "p1", trendyolUrl: "https://x", name: "Ürün" },
     });
 
-    const request = new Request(`http://localhost/api/admin/products/${product.id}`, {
+    const request = authedRequest(`http://localhost/api/admin/products/${product.id}`, {
       method: "PATCH",
       body: JSON.stringify({ minRating: 3 }),
     });
@@ -317,7 +317,7 @@ describe("/api/admin/products", () => {
     expect(response.status).toBe(200);
     expect((await response.json()).minRating).toBe(3);
 
-    const clearRequest = new Request(`http://localhost/api/admin/products/${product.id}`, {
+    const clearRequest = authedRequest(`http://localhost/api/admin/products/${product.id}`, {
       method: "PATCH",
       body: JSON.stringify({ minRating: null }),
     });
@@ -331,7 +331,7 @@ describe("/api/admin/products", () => {
       data: { accountId, trendyolProductId: "p1", trendyolUrl: "https://x", name: "Ürün" },
     });
 
-    const request = new Request(`http://localhost/api/admin/products/${product.id}`, {
+    const request = authedRequest(`http://localhost/api/admin/products/${product.id}`, {
       method: "PATCH",
       body: JSON.stringify({ storeId: "enwood" }),
     });
@@ -339,7 +339,7 @@ describe("/api/admin/products", () => {
     expect(response.status).toBe(200);
     expect((await response.json()).storeId).toBe("enwood");
 
-    const clearRequest = new Request(`http://localhost/api/admin/products/${product.id}`, {
+    const clearRequest = authedRequest(`http://localhost/api/admin/products/${product.id}`, {
       method: "PATCH",
       body: JSON.stringify({ storeId: null }),
     });
@@ -353,7 +353,7 @@ describe("/api/admin/products", () => {
       data: { accountId, trendyolProductId: "p1", trendyolUrl: "https://x", name: "Ürün" },
     });
 
-    const request = new Request(`http://localhost/api/admin/products/${product.id}`, {
+    const request = authedRequest(`http://localhost/api/admin/products/${product.id}`, {
       method: "PATCH",
       body: JSON.stringify({ externalRef: "SKU-42" }),
     });
@@ -361,7 +361,7 @@ describe("/api/admin/products", () => {
     expect(response.status).toBe(200);
     expect((await response.json()).externalRef).toBe("SKU-42");
 
-    const clearRequest = new Request(`http://localhost/api/admin/products/${product.id}`, {
+    const clearRequest = authedRequest(`http://localhost/api/admin/products/${product.id}`, {
       method: "PATCH",
       body: JSON.stringify({ externalRef: null }),
     });
@@ -375,7 +375,7 @@ describe("/api/admin/products", () => {
       data: { accountId, trendyolProductId: "p1", trendyolUrl: "https://x", name: "Ürün" },
     });
 
-    const request = new Request(`http://localhost/api/admin/products/${product.id}`, {
+    const request = authedRequest(`http://localhost/api/admin/products/${product.id}`, {
       method: "PATCH",
       body: JSON.stringify({ reviewGroupId: "capella-tv-unitesi" }),
     });
@@ -383,7 +383,7 @@ describe("/api/admin/products", () => {
     expect(response.status).toBe(200);
     expect((await response.json()).reviewGroupId).toBe("capella-tv-unitesi");
 
-    const clearRequest = new Request(`http://localhost/api/admin/products/${product.id}`, {
+    const clearRequest = authedRequest(`http://localhost/api/admin/products/${product.id}`, {
       method: "PATCH",
       body: JSON.stringify({ reviewGroupId: null }),
     });
@@ -400,7 +400,7 @@ describe("/api/admin/products", () => {
       data: { accountId, trendyolProductId: "p2", trendyolUrl: "https://x", name: "Ürün 2" },
     });
 
-    const request = new Request(`http://localhost/api/admin/products/${product2.id}`, {
+    const request = authedRequest(`http://localhost/api/admin/products/${product2.id}`, {
       method: "PATCH",
       body: JSON.stringify({ externalRef: "SKU-1" }),
     });
@@ -412,7 +412,7 @@ describe("/api/admin/products", () => {
   });
 
   it("returns 404 instead of 500 when patching an unknown product id", async () => {
-    const request = new Request("http://localhost/api/admin/products/does-not-exist", {
+    const request = authedRequest("http://localhost/api/admin/products/does-not-exist", {
       method: "PATCH",
       body: JSON.stringify({ isTracked: false }),
     });
@@ -431,7 +431,7 @@ describe("/api/admin/products", () => {
       .spyOn(prisma.product, "update")
       .mockRejectedValueOnce(new Error("bağlantı koptu"));
 
-    const request = new Request(`http://localhost/api/admin/products/${product.id}`, {
+    const request = authedRequest(`http://localhost/api/admin/products/${product.id}`, {
       method: "PATCH",
       body: JSON.stringify({ isTracked: false }),
     });
@@ -452,7 +452,7 @@ describe("/api/admin/products", () => {
     });
     await prisma.scrapeLog.create({ data: { productId: product.id, status: "success" } });
 
-    const request = new Request(`http://localhost/api/admin/products/${product.id}`, { method: "DELETE" });
+    const request = authedRequest(`http://localhost/api/admin/products/${product.id}`, { method: "DELETE" });
     const response = await DELETE(request, { params: Promise.resolve({ id: product.id }) });
 
     expect(response.status).toBe(200);
@@ -461,7 +461,7 @@ describe("/api/admin/products", () => {
   });
 
   it("returns 404 instead of 500 when deleting an unknown product id", async () => {
-    const request = new Request("http://localhost/api/admin/products/does-not-exist", { method: "DELETE" });
+    const request = authedRequest("http://localhost/api/admin/products/does-not-exist", { method: "DELETE" });
     const response = await DELETE(request, { params: Promise.resolve({ id: "does-not-exist" }) });
 
     expect(response.status).toBe(404);
