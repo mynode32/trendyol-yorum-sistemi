@@ -21,15 +21,29 @@ function extractProductId(trendyolUrl: string): string | null {
 const minRatingSchema = z.number().int().min(1).max(5).optional();
 
 export async function GET() {
-  const products = await prisma.product.findMany({
-    orderBy: { createdAt: "desc" },
-    include: { _count: { select: { reviews: { where: { isDisplayed: true } } } } },
-  });
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+  const [products, ratingAgg, newReviewsLast7Days] = await Promise.all([
+    prisma.product.findMany({
+      orderBy: { createdAt: "desc" },
+      include: { _count: { select: { reviews: { where: { isDisplayed: true } } } } },
+    }),
+    prisma.review.aggregate({ where: { isDisplayed: true }, _avg: { rating: true } }),
+    prisma.review.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
+  ]);
+
   const data = products.map(({ _count, ...product }) => ({
     ...product,
     displayedReviewCount: _count.reviews,
   }));
-  return NextResponse.json({ data });
+
+  return NextResponse.json({
+    data,
+    summary: {
+      averageRating: ratingAgg._avg.rating,
+      newReviewsLast7Days,
+    },
+  });
 }
 
 export async function POST(request: Request) {

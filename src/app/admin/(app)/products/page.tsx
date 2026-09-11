@@ -20,9 +20,16 @@ type Product = {
   displayedReviewCount: number;
 };
 
+type Summary = {
+  averageRating: number | null;
+  newReviewsLast7Days: number;
+};
+
 type StatusFilter = "all" | "tracked" | "stopped" | "unmatched";
 type SortKey = "name" | "lastScrapedAt";
 type SortDir = "asc" | "desc";
+
+const storeName = process.env.NEXT_PUBLIC_STORE_NAME?.trim();
 
 function widgetStatus(p: Product): { label: string; className: string } {
   if (!p.isTracked) return { label: "Durduruldu", className: "badge-neutral" };
@@ -57,6 +64,7 @@ function formatDate(value: string | null): string {
 export default function ProductsPage() {
   const { showToast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
+  const [summary, setSummary] = useState<Summary | null>(null);
   const [newUrl, setNewUrl] = useState("");
   const [newMinRating, setNewMinRating] = useState("");
   const [loading, setLoading] = useState(true);
@@ -79,6 +87,7 @@ export default function ProductsPage() {
       if (!res.ok) throw new Error();
       const body = await res.json();
       setProducts(body.data);
+      setSummary(body.summary ?? null);
     } catch {
       showToast("Ürünler yüklenemedi. Sayfayı yenilemeyi deneyin.", "error");
     } finally {
@@ -352,6 +361,36 @@ export default function ProductsPage() {
           </p>
         </div>
       </div>
+
+      {!loading && products.length > 0 && (
+        <div className="hero-card">
+          <div className="hero-card__greeting">
+            <span className="hero-card__greeting-label">Hoş geldin</span>
+            <span className="hero-card__greeting-name">{storeName || "👋"}</span>
+          </div>
+          <div className="hero-card__stats">
+            <div className="hero-stat">
+              <span className="hero-stat__value hero-stat__value--accent">
+                {summary?.averageRating != null ? (
+                  <>
+                    ★ {summary.averageRating.toFixed(1)}
+                    <span className="hero-stat__value-unit">/ 5.0</span>
+                  </>
+                ) : (
+                  "—"
+                )}
+              </span>
+              <span className="hero-stat__label">Ortalama Mağaza Puanı</span>
+            </div>
+            <div className="hero-stat">
+              <span className="hero-stat__value hero-stat__value--success">
+                +{summary?.newReviewsLast7Days ?? 0}
+              </span>
+              <span className="hero-stat__label">Son 7 Günde Yeni Yorum</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {!loading && products.length > 0 && (
         <div className="kpi-grid">

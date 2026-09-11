@@ -75,6 +75,64 @@ describe("/api/admin/products", () => {
     expect(body.data[0].displayedReviewCount).toBe(1);
   });
 
+  it("returns a summary with average rating (displayed reviews only) and new-reviews-last-7-days count", async () => {
+    const product = await prisma.product.create({
+      data: { trendyolProductId: "1", trendyolUrl: "https://x", name: "Ürün 1" },
+    });
+    await prisma.review.create({
+      data: {
+        productId: product.id,
+        trendyolReviewId: "r1",
+        rating: 4,
+        comment: "a",
+        authorName: "A",
+        reviewDate: new Date(),
+        isDisplayed: true,
+      },
+    });
+    await prisma.review.create({
+      data: {
+        productId: product.id,
+        trendyolReviewId: "r2",
+        rating: 2,
+        comment: "b",
+        authorName: "B",
+        reviewDate: new Date(),
+        isDisplayed: true,
+      },
+    });
+    // Vitrinde değil — ortalamaya dahil edilmemeli.
+    await prisma.review.create({
+      data: {
+        productId: product.id,
+        trendyolReviewId: "r3",
+        rating: 1,
+        comment: "c",
+        authorName: "C",
+        reviewDate: new Date(),
+        isDisplayed: false,
+      },
+    });
+
+    const response = await GET();
+    const body = await response.json();
+
+    expect(body.summary.averageRating).toBe(3);
+    expect(body.summary.newReviewsLast7Days).toBe(3);
+  });
+
+  it("returns a null average rating when there are no displayed reviews yet", async () => {
+    await prisma.product.create({
+      data: { trendyolProductId: "1", trendyolUrl: "https://x", name: "Ürün 1" },
+    });
+
+    const response = await GET();
+    const body = await response.json();
+
+    expect(body.summary.averageRating).toBeNull();
+    expect(body.summary.newReviewsLast7Days).toBe(0);
+  });
+
   it("accepts an optional minRating and stores it on the product", async () => {
     const request = new Request("http://localhost/api/admin/products", {
       method: "POST",

@@ -13,12 +13,17 @@ type SidebarProps = {
   onLogout: () => void;
 };
 
+const storeName = process.env.NEXT_PUBLIC_STORE_NAME?.trim();
+
 export function Sidebar({ pathname, open, onClose, onLogout }: SidebarProps) {
   return (
     <>
       {open && <div className="admin-sidebar__scrim" onClick={onClose} />}
       <aside className={`admin-sidebar${open ? " admin-sidebar--open" : ""}`}>
-        <span className="admin-sidebar__brand">Trendyol Yorum Sistemi</span>
+        <div className="admin-sidebar__brand">
+          <span className="admin-sidebar__brand-app">Trendyol Yorum Sistemi</span>
+          {storeName && <span className="admin-sidebar__brand-store">{storeName}</span>}
+        </div>
         <nav className="admin-sidebar__nav">
           {LINKS.map(({ href, label, Icon }) => (
             <Link
