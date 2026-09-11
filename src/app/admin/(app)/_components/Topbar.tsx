@@ -4,6 +4,7 @@ const TITLES: { test: (pathname: string) => boolean; label: string }[] = [
   { test: (p) => p.startsWith("/admin/products/") && p.includes("/reviews"), label: "Yorum Moderasyonu" },
   { test: (p) => p.startsWith("/admin/products"), label: "Ürünler" },
   { test: (p) => p.startsWith("/admin/scrape-logs"), label: "Scraper İzleme" },
+  { test: (p) => p.startsWith("/admin/settings"), label: "Ayarlar" },
 ];
 
 function titleFor(pathname: string): string {
