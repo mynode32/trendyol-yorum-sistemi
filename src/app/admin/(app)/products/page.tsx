@@ -1,6 +1,7 @@
 "use client";
 import { Fragment, useEffect, useState } from "react";
 import { adminFetch } from "@/lib/adminFetch";
+import { KpiCard } from "../_components/KpiCard";
 
 type Product = {
   id: string;
@@ -242,8 +243,11 @@ export default function ProductsPage() {
     }
   }
 
+  const trackedCount = products.filter((p) => p.isTracked).length;
+  const displayedReviewTotal = products.reduce((sum, p) => sum + p.displayedReviewCount, 0);
+
   return (
-    <div className="page">
+    <div className="admin-page">
       <div className="page-header">
         <div>
           <h1>Ürünler</h1>
@@ -252,6 +256,14 @@ export default function ProductsPage() {
           </p>
         </div>
       </div>
+
+      {!loading && products.length > 0 && (
+        <div className="kpi-grid">
+          <KpiCard label="Toplam Ürün" value={products.length} />
+          <KpiCard label="Takip Edilen" value={trackedCount} />
+          <KpiCard label="Sitede Gösterilen Yorum" value={displayedReviewTotal} />
+        </div>
+      )}
 
       <form
         onSubmit={addProduct}

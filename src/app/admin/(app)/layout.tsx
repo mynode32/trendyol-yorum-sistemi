@@ -1,16 +1,14 @@
 "use client";
-import Link from "next/link";
+import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { adminFetch } from "@/lib/adminFetch";
-
-const LINKS = [
-  { href: "/admin/products", label: "Ürünler" },
-  { href: "/admin/scrape-logs", label: "Scraper İzleme" },
-];
+import { Sidebar } from "./_components/Sidebar";
+import { Topbar } from "./_components/Topbar";
 
 export default function AdminAppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   async function logout() {
     await adminFetch("/api/admin/logout", { method: "POST" });
@@ -19,27 +17,16 @@ export default function AdminAppLayout({ children }: { children: React.ReactNode
 
   return (
     <div className="admin-shell">
-      <nav className="admin-nav">
-        <div className="admin-nav__inner">
-          <span className="admin-nav__brand">Trendyol Yorum Sistemi</span>
-          <div className="admin-nav__links">
-            {LINKS.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="admin-nav__link"
-                aria-current={pathname.startsWith(link.href) ? "page" : undefined}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={logout}>
-            Çıkış Yap
-          </button>
-        </div>
-      </nav>
-      {children}
+      <Sidebar
+        pathname={pathname}
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onLogout={logout}
+      />
+      <div className="admin-main">
+        <Topbar onMenuClick={() => setSidebarOpen((open) => !open)} />
+        <div className="admin-content">{children}</div>
+      </div>
     </div>
   );
 }

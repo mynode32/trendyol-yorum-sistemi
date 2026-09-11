@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { adminFetch } from "@/lib/adminFetch";
+import { KpiCard } from "../../../_components/KpiCard";
 
 type Review = {
   id: string;
@@ -60,7 +61,7 @@ export default function ProductReviewsModerationPage() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <div className="page">
+    <div className="admin-page">
       <a
         href="/admin/products"
         style={{ fontSize: 13, color: "var(--text-muted)", display: "inline-block", marginBottom: 12 }}
@@ -70,11 +71,15 @@ export default function ProductReviewsModerationPage() {
       <div className="page-header">
         <div>
           <h1>Yorum Moderasyonu</h1>
-          <p className="page-header__subtitle">
-            {total > 0 ? `${total} yorum` : "Uygun olmayan yorumları gizleyin."}
-          </p>
+          <p className="page-header__subtitle">Uygun olmayan yorumları gizleyin.</p>
         </div>
       </div>
+
+      {!loading && total > 0 && (
+        <div className="kpi-grid">
+          <KpiCard label="Toplam Yorum" value={total} />
+        </div>
+      )}
 
       {loading ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>

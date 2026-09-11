@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { adminFetch } from "@/lib/adminFetch";
+import { KpiCard } from "../_components/KpiCard";
 
 type ScrapeLog = {
   id: string;
@@ -32,8 +33,12 @@ export default function ScrapeLogsPage() {
       .catch(() => setError(true));
   }, []);
 
+  const successCount = logs?.filter((l) => l.status === "success").length ?? 0;
+  const failedCount = logs?.filter((l) => l.status === "failed").length ?? 0;
+  const newReviewsTotal = logs?.reduce((sum, l) => sum + l.newReviews, 0) ?? 0;
+
   return (
-    <div className="page">
+    <div className="admin-page">
       <div className="page-header">
         <div>
           <h1>Scraper İzleme</h1>
@@ -43,6 +48,14 @@ export default function ScrapeLogsPage() {
       <p className="page-header__subtitle" style={{ marginBottom: 20 }}>
         Otomatik izleme için <code>/api/admin/health</code> endpoint&apos;i son tarama ve veri güncelliği durumunu verir.
       </p>
+
+      {logs && logs.length > 0 && (
+        <div className="kpi-grid">
+          <KpiCard label="Başarılı" value={successCount} />
+          <KpiCard label="Başarısız" value={failedCount} />
+          <KpiCard label="Toplam Yeni Yorum" value={newReviewsTotal} />
+        </div>
+      )}
 
       {error ? (
         <p className="alert alert-error">Tarama kayıtları yüklenemedi. Sayfayı yenilemeyi deneyin.</p>
