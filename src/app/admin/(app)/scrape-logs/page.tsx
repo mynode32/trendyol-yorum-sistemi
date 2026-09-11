@@ -61,9 +61,6 @@ export default function ScrapeLogsPage() {
           <p className="page-header__subtitle">Son 100 tarama çalıştırması.</p>
         </div>
       </div>
-      <p className="page-header__subtitle" style={{ marginBottom: 20 }}>
-        Otomatik izleme için <code>/api/admin/health</code> endpoint&apos;i son tarama ve veri güncelliği durumunu verir.
-      </p>
 
       {logs && logs.length > 0 && (
         <div className="kpi-grid">
@@ -97,11 +94,8 @@ export default function ScrapeLogsPage() {
         <div className="skeleton" style={{ height: 240, borderRadius: "var(--radius-md)" }} />
       ) : logs.length === 0 ? (
         <div className="empty-state">
-          <strong>Henüz tarama çalıştırılmadı</strong>
-          <p>
-            Manuel tetiklemek için <code>npm run scrape:once -- &lt;trendyolProductId&gt;</code>{" "}
-            komutunu kullanın.
-          </p>
+          <strong>Henüz tarama kaydı yok</strong>
+          <p>Takipteki ürünler planlanan tarama sırasında burada görünür.</p>
         </div>
       ) : filteredLogs.length === 0 ? (
         <div className="empty-state">

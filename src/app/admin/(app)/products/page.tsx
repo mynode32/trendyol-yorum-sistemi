@@ -385,8 +385,8 @@ export default function ProductsPage() {
       {!loading && products.length > 0 && (
         <div className="hero-card">
           <div className="hero-card__greeting">
-            <span className="hero-card__greeting-label">Hoş geldin</span>
-            <span className="hero-card__greeting-name">{summary?.accountName || "👋"}</span>
+            <span className="hero-card__greeting-label">Hoş geldiniz</span>
+            <span className="hero-card__greeting-name">{summary?.accountName ?? ""}</span>
           </div>
           <div className="hero-card__stats">
             <div className="hero-stat">
@@ -695,7 +695,7 @@ export default function ProductsPage() {
                             type="text"
                             className="input"
                             defaultValue={p.storeId ?? ""}
-                            placeholder="örn. enwood"
+                            placeholder="örn. magaza-etiketi"
                             onBlur={(e) => updateStoreId(p, e.target.value)}
                             disabled={actionProductId === p.id}
                           />

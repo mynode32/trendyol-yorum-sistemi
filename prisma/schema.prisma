@@ -11,10 +11,7 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// Bir müşteri hesabı (kiracı). enwood pilot müşteri olarak scripts/create-account.ts
-// ile oluşturulur — kod içinde hiçbir yerde özel olarak referans verilmez, sadece
-// çalışma zamanında var olan bir veri satırıdır. Sonraki her müşteri aynı script'le
-// eklenir.
+// Bir müşteri hesabı (kiracı). scripts/create-account.ts ile oluşturulur.
 model Account {
   id        String    @id @default(cuid())
   name      String
@@ -23,9 +20,8 @@ model Account {
   products  Product[]
 }
 
-// Bir hesaba giriş yapabilen kişi. Faz 1'de hesap başına tek kullanıcı var,
-// ama Account'tan ayrı tutuldu ki ileride (Faz 3) aynı hesaba ikinci bir
-// kullanıcı davet etmek şema değişikliği gerektirmesin.
+// Bir hesaba giriş yapabilen kişi. Account'tan ayrı tutulur ki ileride aynı
+// hesaba ikinci bir kullanıcı eklemek şema değişikliği gerektirmesin.
 model User {
   id           String   @id @default(cuid())
   accountId    String
@@ -45,27 +41,17 @@ model Product {
   // Trendyol ürün sayfasından (og:image) çekilir; ilk taramaya kadar null kalır.
   imageUrl          String?
   isTracked         Boolean     @default(true)
-  // Ayarlanırsa, scraper bu puanın altındaki yorumları hiç depolamaz (1-5).
-  // null = filtresiz, tüm puanlar çekilir. Geriye dönük mevcut yorumları etkilemez,
-  // yalnızca bundan sonraki taramalarda neyin depolanacağını belirler.
+  // Ayarlanırsa, scraper bu puanın altındaki yorumları hiç depolamaz (1-5). null = filtresiz.
   minRating         Int?
   // Sitede aynı anda en fazla bu kadar yorum "vitrin"de tutulur (en yeni N).
-  // Yeni uygun bir yorum eklendiğinde en eskisi vitrinden düşer.
   maxDisplayedReviews Int       @default(50)
-  // Müşterinin kendi e-ticaret sitesindeki ürün kodu (örn. İdeaSoft stok kodu).
-  // Widget bunu tek bir site-geneli script'ten {productStockcode} gibi bir
-  // şablon değişkeniyle alıp /resolve endpoint'i üzerinden doğru ürünü bulur —
-  // her ürün için ayrı script yazmaya gerek kalmaz.
+  // Müşterinin kendi sitesindeki ürün kodu; widget /resolve üzerinden bununla eşleştirir.
   externalRef       String?     @unique
-  // Hangi müşteri sitesine ait olduğunu belirten basit bir etiket (örn. "enwood").
-  // /resolve, externalRef zaten benzersiz olsa da, script'in YANLIŞ siteye
-  // yapıştırılması durumunda başka bir müşterinin yorumunun sızmasını engellemek
-  // için storeId'nin de eşleşmesini zorunlu kılar.
+  // Hangi müşteri sitesine ait olduğunu belirten etiket; script yanlış siteye
+  // yapıştırılırsa başka bir müşterinin yorumunun sızmasını engeller.
   storeId           String?
-  // Aynı fiziksel ürünün farklı boy/beden varyantlarını (örn. 120/140/160cm) birbirine
-  // bağlar. Doldurulursa, bu değeri paylaşan ürünlerin yorumları widget'ta VE
-  // özet puanında birlikte (havuzlanmış) gösterilir — sırf santim farklı diye bir
-  // varyantın yorumsuz görünmesini önler. Boşsa ürün her zamanki gibi tek başına.
+  // Aynı ürünün farklı boy/beden varyantlarını birbirine bağlar; doldurulursa bu
+  // değeri paylaşan ürünlerin yorumları birlikte (havuzlanmış) gösterilir.
   reviewGroupId     String?
   lastScrapedAt     DateTime?
   createdAt         DateTime    @default(now())
