@@ -8,6 +8,7 @@ describe("prisma client", () => {
         trendyolProductId: "test-123",
         trendyolUrl: "https://www.trendyol.com/test-123",
         name: "Test Ürün",
+        account: { create: { name: "test-account" } },
       },
     });
     expect(product.id).toBeDefined();

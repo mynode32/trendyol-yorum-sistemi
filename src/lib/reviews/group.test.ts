@@ -3,10 +3,15 @@ import { prisma } from "@/lib/db";
 import { resolveDisplayProductIds } from "./group";
 
 describe("resolveDisplayProductIds", () => {
+  let accountId: string;
+
   beforeEach(async () => {
     await prisma.scrapeLog.deleteMany();
     await prisma.review.deleteMany();
     await prisma.product.deleteMany();
+    await prisma.account.deleteMany();
+    const account = await prisma.account.create({ data: { name: "test-account" } });
+    accountId = account.id;
   });
 
   afterAll(async () => {
@@ -15,7 +20,7 @@ describe("resolveDisplayProductIds", () => {
 
   it("returns just the product's own id when reviewGroupId is not set", async () => {
     const product = await prisma.product.create({
-      data: { trendyolProductId: "1", trendyolUrl: "https://x", name: "Ürün 1" },
+      data: { accountId, trendyolProductId: "1", trendyolUrl: "https://x", name: "Ürün 1" },
     });
 
     const ids = await resolveDisplayProductIds(product);
@@ -26,6 +31,7 @@ describe("resolveDisplayProductIds", () => {
   it("returns every product sharing the same reviewGroupId and storeId", async () => {
     const a = await prisma.product.create({
       data: {
+        accountId,
         trendyolProductId: "1",
         trendyolUrl: "https://x",
         name: "140cm",
@@ -35,6 +41,7 @@ describe("resolveDisplayProductIds", () => {
     });
     const b = await prisma.product.create({
       data: {
+        accountId,
         trendyolProductId: "2",
         trendyolUrl: "https://x",
         name: "160cm",
@@ -43,7 +50,7 @@ describe("resolveDisplayProductIds", () => {
       },
     });
     await prisma.product.create({
-      data: { trendyolProductId: "3", trendyolUrl: "https://x", name: "unrelated" },
+      data: { accountId, trendyolProductId: "3", trendyolUrl: "https://x", name: "unrelated" },
     });
 
     const ids = await resolveDisplayProductIds(a);
@@ -54,6 +61,7 @@ describe("resolveDisplayProductIds", () => {
   it("does not pool across different storeIds even with the same reviewGroupId", async () => {
     const a = await prisma.product.create({
       data: {
+        accountId,
         trendyolProductId: "1",
         trendyolUrl: "https://x",
         name: "enwood variant",
@@ -63,6 +71,7 @@ describe("resolveDisplayProductIds", () => {
     });
     await prisma.product.create({
       data: {
+        accountId,
         trendyolProductId: "2",
         trendyolUrl: "https://x",
         name: "other store variant",

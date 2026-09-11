@@ -7,10 +7,15 @@ function makeRequest(url: string) {
 }
 
 describe("GET /api/v1/products/resolve", () => {
+  let accountId: string;
+
   beforeEach(async () => {
     await prisma.scrapeLog.deleteMany();
     await prisma.review.deleteMany();
     await prisma.product.deleteMany();
+    await prisma.account.deleteMany();
+    const account = await prisma.account.create({ data: { name: "test-account" } });
+    accountId = account.id;
   });
 
   afterAll(async () => {
@@ -19,7 +24,7 @@ describe("GET /api/v1/products/resolve", () => {
 
   it("resolves a product's internal id from its externalRef", async () => {
     const product = await prisma.product.create({
-      data: { trendyolProductId: "p-1", trendyolUrl: "https://x", name: "Ürün", externalRef: "SKU-123" },
+      data: { accountId, trendyolProductId: "p-1", trendyolUrl: "https://x", name: "Ürün", externalRef: "SKU-123" },
     });
 
     const response = await GET(makeRequest("http://localhost/api/v1/products/resolve?ref=SKU-123"));
@@ -39,7 +44,7 @@ describe("GET /api/v1/products/resolve", () => {
 
   it("resolves when storeId is provided and matches the product's storeId", async () => {
     const product = await prisma.product.create({
-      data: { trendyolProductId: "p-2", trendyolUrl: "https://x", name: "Ürün", externalRef: "SKU-456", storeId: "enwood" },
+      data: { accountId, trendyolProductId: "p-2", trendyolUrl: "https://x", name: "Ürün", externalRef: "SKU-456", storeId: "enwood" },
     });
 
     const response = await GET(
@@ -53,7 +58,7 @@ describe("GET /api/v1/products/resolve", () => {
 
   it("returns 404 when storeId is provided but does not match the product's storeId (cross-store leak prevention)", async () => {
     await prisma.product.create({
-      data: { trendyolProductId: "p-3", trendyolUrl: "https://x", name: "Ürün", externalRef: "SKU-789", storeId: "enwood" },
+      data: { accountId, trendyolProductId: "p-3", trendyolUrl: "https://x", name: "Ürün", externalRef: "SKU-789", storeId: "enwood" },
     });
 
     const response = await GET(

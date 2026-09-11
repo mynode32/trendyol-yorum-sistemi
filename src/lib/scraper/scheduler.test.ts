@@ -4,10 +4,15 @@ import { runScheduledScrape } from "./scheduler";
 import * as persist from "./persist";
 
 describe("runScheduledScrape", () => {
+  let accountId: string;
+
   beforeEach(async () => {
     await prisma.scrapeLog.deleteMany();
     await prisma.review.deleteMany();
     await prisma.product.deleteMany();
+    await prisma.account.deleteMany();
+    const account = await prisma.account.create({ data: { name: "test-account" } });
+    accountId = account.id;
     vi.restoreAllMocks();
   });
 
@@ -17,10 +22,10 @@ describe("runScheduledScrape", () => {
 
   it("scrapes every tracked product sequentially and skips untracked ones", async () => {
     const tracked = await prisma.product.create({
-      data: { trendyolProductId: "t1", trendyolUrl: "https://x", name: "Takip Edilen", isTracked: true },
+      data: { accountId, trendyolProductId: "t1", trendyolUrl: "https://x", name: "Takip Edilen", isTracked: true },
     });
     await prisma.product.create({
-      data: { trendyolProductId: "t2", trendyolUrl: "https://x", name: "Takip Edilmeyen", isTracked: false },
+      data: { accountId, trendyolProductId: "t2", trendyolUrl: "https://x", name: "Takip Edilmeyen", isTracked: false },
     });
 
     const scrapeProductSpy = vi
@@ -36,10 +41,10 @@ describe("runScheduledScrape", () => {
 
   it("continues to the next product when one scrape fails", async () => {
     const p1 = await prisma.product.create({
-      data: { trendyolProductId: "t1", trendyolUrl: "https://x", name: "1", isTracked: true },
+      data: { accountId, trendyolProductId: "t1", trendyolUrl: "https://x", name: "1", isTracked: true },
     });
     const p2 = await prisma.product.create({
-      data: { trendyolProductId: "t2", trendyolUrl: "https://x", name: "2", isTracked: true },
+      data: { accountId, trendyolProductId: "t2", trendyolUrl: "https://x", name: "2", isTracked: true },
     });
 
     const scrapeProductSpy = vi

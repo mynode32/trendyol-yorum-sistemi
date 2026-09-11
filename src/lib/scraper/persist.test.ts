@@ -4,10 +4,15 @@ import { scrapeProduct } from "./persist";
 import * as client from "./trendyolClient";
 
 describe("scrapeProduct", () => {
+  let accountId: string;
+
   beforeEach(async () => {
     await prisma.scrapeLog.deleteMany();
     await prisma.review.deleteMany();
     await prisma.product.deleteMany();
+    await prisma.account.deleteMany();
+    const account = await prisma.account.create({ data: { name: "test-account" } });
+    accountId = account.id;
     // Varsayılan: ürün bilgisi bulunamadı — testler ilgilendiğinde kendi mock'unu koyar.
     vi.spyOn(client, "fetchProductInfo").mockResolvedValue({ name: null, imageUrl: null });
   });
@@ -18,7 +23,7 @@ describe("scrapeProduct", () => {
 
   it("inserts new reviews, refreshes changed source fields, and preserves moderation", async () => {
     const product = await prisma.product.create({
-      data: { trendyolProductId: "p-1", trendyolUrl: "https://x", name: "Ürün 1" },
+      data: { accountId, trendyolProductId: "p-1", trendyolUrl: "https://x", name: "Ürün 1" },
     });
 
     vi.spyOn(client, "fetchAllReviews").mockResolvedValue([
@@ -83,7 +88,7 @@ describe("scrapeProduct", () => {
 
   it("skips reviews below the product's minRating threshold", async () => {
     const product = await prisma.product.create({
-      data: { trendyolProductId: "p-3", trendyolUrl: "https://x", name: "Ürün 3", minRating: 4 },
+      data: { accountId, trendyolProductId: "p-3", trendyolUrl: "https://x", name: "Ürün 3", minRating: 4 },
     });
 
     vi.spyOn(client, "fetchAllReviews").mockResolvedValue([
@@ -102,7 +107,7 @@ describe("scrapeProduct", () => {
 
   it("marks only the newest maxDisplayedReviews reviews as displayed after scraping", async () => {
     const product = await prisma.product.create({
-      data: { trendyolProductId: "p-4", trendyolUrl: "https://x", name: "Ürün 4", maxDisplayedReviews: 2 },
+      data: { accountId, trendyolProductId: "p-4", trendyolUrl: "https://x", name: "Ürün 4", maxDisplayedReviews: 2 },
     });
 
     vi.spyOn(client, "fetchAllReviews").mockResolvedValue([
@@ -126,7 +131,7 @@ describe("scrapeProduct", () => {
 
   it("fills in the real product name/image on first scrape when they're not known yet", async () => {
     const product = await prisma.product.create({
-      data: { trendyolProductId: "p-5", trendyolUrl: "https://x/urun", name: "Ürün p-5" },
+      data: { accountId, trendyolProductId: "p-5", trendyolUrl: "https://x/urun", name: "Ürün p-5" },
     });
     vi.spyOn(client, "fetchAllReviews").mockResolvedValue([]);
     vi.spyOn(client, "fetchProductInfo").mockResolvedValue({
@@ -144,6 +149,7 @@ describe("scrapeProduct", () => {
   it("does not re-fetch product info once the image is already known", async () => {
     const product = await prisma.product.create({
       data: {
+        accountId,
         trendyolProductId: "p-6",
         trendyolUrl: "https://x/urun",
         name: "Zaten Bilinen Ürün",
@@ -160,7 +166,7 @@ describe("scrapeProduct", () => {
 
   it("keeps scraping successful when fetchProductInfo fails", async () => {
     const product = await prisma.product.create({
-      data: { trendyolProductId: "p-7", trendyolUrl: "https://x/urun", name: "Ürün p-7" },
+      data: { accountId, trendyolProductId: "p-7", trendyolUrl: "https://x/urun", name: "Ürün p-7" },
     });
     vi.spyOn(client, "fetchAllReviews").mockResolvedValue([]);
     vi.spyOn(client, "fetchProductInfo").mockRejectedValue(new Error("sayfa yüklenemedi"));
@@ -175,7 +181,7 @@ describe("scrapeProduct", () => {
 
   it("writes a failed ScrapeLog when fetchAllReviews throws, without stopping the process", async () => {
     const product = await prisma.product.create({
-      data: { trendyolProductId: "p-2", trendyolUrl: "https://x", name: "Ürün 2" },
+      data: { accountId, trendyolProductId: "p-2", trendyolUrl: "https://x", name: "Ürün 2" },
     });
 
     vi.spyOn(client, "fetchAllReviews").mockRejectedValue(new Error("network error"));

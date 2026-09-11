@@ -36,7 +36,13 @@ describe("syncDisplayedReviews", () => {
 
   it("marks only the newest maxDisplayedReviews reviews as displayed", async () => {
     const product = await prisma.product.create({
-      data: { trendyolProductId: "p-1", trendyolUrl: "https://x", name: "Ürün 1", maxDisplayedReviews: 2 },
+      data: {
+        trendyolProductId: "p-1",
+        trendyolUrl: "https://x",
+        name: "Ürün 1",
+        maxDisplayedReviews: 2,
+        account: { create: { name: "test-account" } },
+      },
     });
 
     await createReview({ productId: product.id, trendyolReviewId: "r-1", reviewDate: new Date("2026-01-01") });
@@ -58,7 +64,13 @@ describe("syncDisplayedReviews", () => {
 
   it("excludes hidden and unapproved reviews from the displayed set", async () => {
     const product = await prisma.product.create({
-      data: { trendyolProductId: "p-2", trendyolUrl: "https://x", name: "Ürün 2", maxDisplayedReviews: 2 },
+      data: {
+        trendyolProductId: "p-2",
+        trendyolUrl: "https://x",
+        name: "Ürün 2",
+        maxDisplayedReviews: 2,
+        account: { create: { name: "test-account" } },
+      },
     });
 
     await createReview({ productId: product.id, trendyolReviewId: "r-1", reviewDate: new Date("2026-01-03"), isHidden: true });
@@ -80,7 +92,13 @@ describe("syncDisplayedReviews", () => {
 
   it("demotes a previously displayed review once a newer one takes its place", async () => {
     const product = await prisma.product.create({
-      data: { trendyolProductId: "p-3", trendyolUrl: "https://x", name: "Ürün 3", maxDisplayedReviews: 1 },
+      data: {
+        trendyolProductId: "p-3",
+        trendyolUrl: "https://x",
+        name: "Ürün 3",
+        maxDisplayedReviews: 1,
+        account: { create: { name: "test-account" } },
+      },
     });
 
     await createReview({ productId: product.id, trendyolReviewId: "r-old", reviewDate: new Date("2026-01-01") });

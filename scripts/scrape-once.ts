@@ -3,8 +3,15 @@ import { scrapeProduct } from "../src/lib/scraper/persist";
 
 async function main() {
   const trendyolProductId = process.argv[2];
-  if (!trendyolProductId) {
-    console.error("Kullanım: npm run scrape:once -- <trendyolProductId>");
+  const accountEmail = process.argv[3];
+  if (!trendyolProductId || !accountEmail) {
+    console.error("Kullanım: npm run scrape:once -- <trendyolProductId> <hesap-email>");
+    process.exit(1);
+  }
+
+  const account = await prisma.user.findUnique({ where: { email: accountEmail } });
+  if (!account) {
+    console.error(`"${accountEmail}" email'ine sahip bir kullanıcı bulunamadı.`);
     process.exit(1);
   }
 
@@ -12,6 +19,7 @@ async function main() {
     where: { trendyolProductId },
     update: {},
     create: {
+      accountId: account.accountId,
       trendyolProductId,
       trendyolUrl: `https://www.trendyol.com/urun-p-${trendyolProductId}`,
       name: `Ürün ${trendyolProductId}`,

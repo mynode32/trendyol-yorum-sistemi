@@ -12,7 +12,6 @@ async function main() {
   const result = await createAccount(prisma, email, password, accountName);
   console.log(`Hesap oluşturuldu: ${result.accountName} (${result.accountId})`);
   console.log(`Kullanıcı: ${result.email}`);
-  console.log(`Geriye dönük eşlenen ürün sayısı: ${result.backfilledProductCount}`);
   await prisma.$disconnect();
 }
 

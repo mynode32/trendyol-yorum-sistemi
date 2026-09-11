@@ -30,10 +30,8 @@ müşteri hesabı oluşturmak için:
 npx tsx scripts/create-account.ts <email> <şifre> <hesap-adı>
 ```
 
-Bu script hesabı+kullanıcıyı oluşturur ve o ana kadar hiçbir hesaba
-bağlanmamış (`accountId IS NULL`) ürünleri de bu hesaba bağlar — sadece ilk
-hesap için (geriye dönük göç) anlamlıdır, sonraki her müşteri için hesap
-boş başlar.
+Bu script hesabı+kullanıcıyı oluşturur; hesap ürünsüz başlar, ürünler admin
+panelinden eklenir.
 
 Oturumlar 24 saat sonra sunucu tarafında geçersiz olur (`MAX_SESSION_AGE_MS`).
 `SESSION_SECRET` değiştirilirse mevcut tüm oturumlar anında geçersiz olur.
@@ -77,9 +75,12 @@ derler. Widget'ı tek başına yeniden derlemek için: `npm run build:widget`.
 Tek bir ürünü elle taramak (ürün yoksa oluşturulur):
 
 ```bash
-npm run scrape:once -- <trendyolProductId>
-# örn: npm run scrape:once -- 1071760667
+npm run scrape:once -- <trendyolProductId> <hesap-email>
+# örn: npm run scrape:once -- 1071760667 enwood@ornek.com
 ```
+
+`<hesap-email>` sadece ürün henüz yoksa (yeni oluşturulurken) hangi hesaba
+bağlanacağını belirler — ürün zaten takipteyse yok sayılır.
 
 Zamanlanmış taramayı başlatmak (her 3 saatte bir, `isTracked=true` tüm ürünler sırayla):
 
@@ -105,7 +106,7 @@ bir Linux sunucuda sanal ekran kullanın:
 sudo apt-get install -y xvfb
 xvfb-run -a npm run scheduler:start
 # tek seferlik tarama için de aynısı:
-xvfb-run -a npm run scrape:once -- <trendyolProductId>
+xvfb-run -a npm run scrape:once -- <trendyolProductId> <hesap-email>
 ```
 
 Alternatif olarak masaüstü ortamı olan bir makinede (veya X sunucusu olan bir

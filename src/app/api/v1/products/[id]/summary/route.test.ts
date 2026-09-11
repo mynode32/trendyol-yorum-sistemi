@@ -3,11 +3,16 @@ import { prisma } from "@/lib/db";
 import { GET } from "./route";
 
 describe("GET /api/v1/products/:id/summary", () => {
+  let accountId: string;
+
   beforeEach(async () => {
     // ScrapeLog önce silinmeli — bkz. Task 9 fix round 1 notu.
     await prisma.scrapeLog.deleteMany();
     await prisma.review.deleteMany();
     await prisma.product.deleteMany();
+    await prisma.account.deleteMany();
+    const account = await prisma.account.create({ data: { name: "test-account" } });
+    accountId = account.id;
   });
 
   afterAll(async () => {
@@ -16,7 +21,7 @@ describe("GET /api/v1/products/:id/summary", () => {
 
   it("computes average rating and per-star counts for approved, non-hidden reviews", async () => {
     const product = await prisma.product.create({
-      data: { trendyolProductId: "p-1", trendyolUrl: "https://x", name: "Ürün" },
+      data: { accountId, trendyolProductId: "p-1", trendyolUrl: "https://x", name: "Ürün" },
     });
 
     await prisma.review.createMany({
@@ -42,6 +47,7 @@ describe("GET /api/v1/products/:id/summary", () => {
   it("pools ratings from sibling products sharing reviewGroupId + storeId", async () => {
     const a = await prisma.product.create({
       data: {
+        accountId,
         trendyolProductId: "p-140",
         trendyolUrl: "https://x",
         name: "140cm",
@@ -51,6 +57,7 @@ describe("GET /api/v1/products/:id/summary", () => {
     });
     const b = await prisma.product.create({
       data: {
+        accountId,
         trendyolProductId: "p-160",
         trendyolUrl: "https://x",
         name: "160cm",

@@ -7,10 +7,15 @@ function makeRequest(url: string) {
 }
 
 describe("GET /api/v1/products/:id/reviews", () => {
+  let accountId: string;
+
   beforeEach(async () => {
     await prisma.scrapeLog.deleteMany();
     await prisma.review.deleteMany();
     await prisma.product.deleteMany();
+    await prisma.account.deleteMany();
+    const account = await prisma.account.create({ data: { name: "test-account" } });
+    accountId = account.id;
   });
 
   afterAll(async () => {
@@ -19,7 +24,7 @@ describe("GET /api/v1/products/:id/reviews", () => {
 
   it("returns paginated, approved & non-hidden reviews filtered by stars", async () => {
     const product = await prisma.product.create({
-      data: { trendyolProductId: "p-1", trendyolUrl: "https://x", name: "Ürün" },
+      data: { accountId, trendyolProductId: "p-1", trendyolUrl: "https://x", name: "Ürün" },
     });
 
     await prisma.review.createMany({
@@ -43,7 +48,7 @@ describe("GET /api/v1/products/:id/reviews", () => {
 
   it("sort=longest returns the globally longest reviews, not just the longest within a page", async () => {
     const product = await prisma.product.create({
-      data: { trendyolProductId: "p-longest", trendyolUrl: "https://x", name: "Ürün" },
+      data: { accountId, trendyolProductId: "p-longest", trendyolUrl: "https://x", name: "Ürün" },
     });
 
     // Yorum uzunlukları alfabetik sıradan bağımsız olsun diye baş harfler kasıtlı
@@ -99,6 +104,7 @@ describe("GET /api/v1/products/:id/reviews", () => {
   it("pools reviews from sibling products sharing reviewGroupId + storeId", async () => {
     const a = await prisma.product.create({
       data: {
+        accountId,
         trendyolProductId: "p-140",
         trendyolUrl: "https://x",
         name: "140cm",
@@ -108,6 +114,7 @@ describe("GET /api/v1/products/:id/reviews", () => {
     });
     const b = await prisma.product.create({
       data: {
+        accountId,
         trendyolProductId: "p-160",
         trendyolUrl: "https://x",
         name: "160cm",
@@ -134,7 +141,7 @@ describe("GET /api/v1/products/:id/reviews", () => {
 
   it("returns 400 with an INVALID_QUERY error for a malformed query param", async () => {
     const product = await prisma.product.create({
-      data: { trendyolProductId: "p-bad-query", trendyolUrl: "https://x", name: "Ürün" },
+      data: { accountId, trendyolProductId: "p-bad-query", trendyolUrl: "https://x", name: "Ürün" },
     });
 
     const response = await GET(

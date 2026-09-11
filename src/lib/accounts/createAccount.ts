@@ -1,17 +1,16 @@
 import { prisma } from "../db";
 import { hashPassword } from "../auth/password";
 
-type AccountDb = Pick<typeof prisma, "account" | "user" | "product">;
+type AccountDb = Pick<typeof prisma, "account" | "user">;
 
 export type CreateAccountResult = {
   accountId: string;
   accountName: string;
   userId: string;
   email: string;
-  backfilledProductCount: number;
 };
 
-// Generic for any customer — "enwood" is passed in as a CLI argument, never hardcoded here.
+// Generic for any customer — no hardcoded names.
 export async function createAccount(
   db: AccountDb,
   email: string,
@@ -23,16 +22,11 @@ export async function createAccount(
   const user = await db.user.create({
     data: { accountId: account.id, email, passwordHash },
   });
-  const backfill = await db.product.updateMany({
-    where: { accountId: null },
-    data: { accountId: account.id },
-  });
 
   return {
     accountId: account.id,
     accountName: account.name,
     userId: user.id,
     email: user.email,
-    backfilledProductCount: backfill.count,
   };
 }

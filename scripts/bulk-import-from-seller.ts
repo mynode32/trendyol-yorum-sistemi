@@ -2,12 +2,21 @@ import { prisma } from "../src/lib/db";
 import { discoverSellerProductIds } from "../src/lib/scraper/trendyolClient";
 
 async function main() {
-  const sellerUrl = process.argv[2];
-  const storeId = process.argv[3] || undefined;
-  const minRating = process.argv[4] ? Number(process.argv[4]) : undefined;
+  const accountEmail = process.argv[2];
+  const sellerUrl = process.argv[3];
+  const storeId = process.argv[4] || undefined;
+  const minRating = process.argv[5] ? Number(process.argv[5]) : undefined;
 
-  if (!sellerUrl) {
-    console.error("Kullanım: npm run bulk-import -- <mağazaUrl> [mağazaEtiketi] [minPuan]");
+  if (!accountEmail || !sellerUrl) {
+    console.error(
+      "Kullanım: npm run bulk-import -- <hesap-email> <mağazaUrl> [mağazaEtiketi] [minPuan]"
+    );
+    process.exit(1);
+  }
+
+  const account = await prisma.user.findUnique({ where: { email: accountEmail } });
+  if (!account) {
+    console.error(`"${accountEmail}" email'ine sahip bir kullanıcı bulunamadı.`);
     process.exit(1);
   }
 
@@ -26,6 +35,7 @@ async function main() {
   if (newIds.length > 0) {
     await prisma.product.createMany({
       data: newIds.map((id) => ({
+        accountId: account.accountId,
         trendyolProductId: id,
         trendyolUrl: `https://www.trendyol.com/urun-p-${id}`,
         name: `Ürün ${id}`,

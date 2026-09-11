@@ -37,12 +37,8 @@ model User {
 
 model Product {
   id                String      @id @default(cuid())
-  // Nullable: mevcut production verisi scripts/create-account.ts ile geriye dönük
-  // doldurulana kadar boş kalabilir. Faz 2'de tüm okuma/yazma yolları bunu zorunlu
-  // kabul edecek; DB seviyesinde NOT NULL kısıtı, geri dönük doldurma doğrulandıktan
-  // sonra ayrı bir migration'da eklenecek.
-  accountId         String?
-  account           Account?    @relation(fields: [accountId], references: [id])
+  accountId         String
+  account           Account     @relation(fields: [accountId], references: [id])
   trendyolProductId String      @unique
   trendyolUrl       String
   name              String

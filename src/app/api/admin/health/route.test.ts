@@ -20,6 +20,7 @@ describe("GET /api/admin/health", () => {
         trendyolUrl: "https://x",
         name: "Güncel",
         lastScrapedAt: new Date(),
+        account: { create: { name: "test-account" } },
       },
     });
     await prisma.scrapeLog.create({ data: { productId: fresh.id, status: "success" } });

@@ -17,14 +17,11 @@ function fakeDb() {
         passwordHash: data.passwordHash,
       })),
     },
-    product: {
-      updateMany: vi.fn(async () => ({ count: 3 })),
-    },
   };
 }
 
 describe("createAccount", () => {
-  it("creates an account and user, and backfills unassigned products", async () => {
+  it("creates an account and its first user", async () => {
     const db = fakeDb();
 
     const result = await createAccount(db as never, "owner@example.com", "s3cret-pass", "some-customer");
@@ -33,16 +30,11 @@ describe("createAccount", () => {
     expect(db.user.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ accountId: "account-1", email: "owner@example.com" }),
     });
-    expect(db.product.updateMany).toHaveBeenCalledWith({
-      where: { accountId: null },
-      data: { accountId: "account-1" },
-    });
     expect(result).toEqual({
       accountId: "account-1",
       accountName: "some-customer",
       userId: "user-1",
       email: "owner@example.com",
-      backfilledProductCount: 3,
     });
   });
 
