@@ -11,8 +11,38 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// Bir müşteri hesabı (kiracı). enwood pilot müşteri olarak scripts/create-account.ts
+// ile oluşturulur — kod içinde hiçbir yerde özel olarak referans verilmez, sadece
+// çalışma zamanında var olan bir veri satırıdır. Sonraki her müşteri aynı script'le
+// eklenir.
+model Account {
+  id        String    @id @default(cuid())
+  name      String
+  createdAt DateTime  @default(now())
+  users     User[]
+  products  Product[]
+}
+
+// Bir hesaba giriş yapabilen kişi. Faz 1'de hesap başına tek kullanıcı var,
+// ama Account'tan ayrı tutuldu ki ileride (Faz 3) aynı hesaba ikinci bir
+// kullanıcı davet etmek şema değişikliği gerektirmesin.
+model User {
+  id           String   @id @default(cuid())
+  accountId    String
+  account      Account  @relation(fields: [accountId], references: [id])
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
 model Product {
   id                String      @id @default(cuid())
+  // Nullable: mevcut production verisi scripts/create-account.ts ile geriye dönük
+  // doldurulana kadar boş kalabilir. Faz 2'de tüm okuma/yazma yolları bunu zorunlu
+  // kabul edecek; DB seviyesinde NOT NULL kısıtı, geri dönük doldurma doğrulandıktan
+  // sonra ayrı bir migration'da eklenecek.
+  accountId         String?
+  account           Account?    @relation(fields: [accountId], references: [id])
   trendyolProductId String      @unique
   trendyolUrl       String
   name              String
@@ -47,6 +77,7 @@ model Product {
   scrapeLogs        ScrapeLog[]
 
   @@index([reviewGroupId])
+  @@index([accountId])
 }
 
 model Review {
