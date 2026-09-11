@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-const STALE_AFTER_MS = 6 * 60 * 60 * 1000;
+// Tarama artık haftada bir çalışıyor (bkz. scripts/run-scheduler.ts); eşik,
+// bir çalıştırmanın gecikmesine tolerans tanımak için 7 günden biraz fazla.
+const STALE_AFTER_MS = 8 * 24 * 60 * 60 * 1000;
 
 /** Yöneticiye açık, izleme sistemlerinin de oturumla çağırabileceği durum özeti. */
 export async function GET() {

@@ -1,7 +1,8 @@
 # Production worker: local bilgisayardan (residential IP) production Supabase
 # veritabanına yorum tarar. Kimlik bilgileri repo'ya asla girmez — .env.vercel
 # (gitignored) dosyasından çalışma anında okunur. Windows Görev Zamanlayıcı
-# "TrendyolYorumScraper" görevi bu script'i her 3 saatte bir çalıştırır.
+# "TrendyolYorumScraper" görevi bu script'i haftada bir çalıştırır (tetikleyiciyi
+# değiştirmek için bkz. README.md "Scraper" bölümü).
 Set-Location "C:\Users\asrin\Desktop\trendenyol projesi"
 
 Get-Content ".env.vercel" | ForEach-Object {

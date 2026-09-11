@@ -1,8 +1,9 @@
 import { prisma } from "../src/lib/db";
 import { runScheduledScrape } from "../src/lib/scraper/scheduler";
 
-// GitHub Actions cron workflow'u tarafından çağrılır: node-cron ile beklemek yerine
-// tek seferlik çalışıp çıkar — zamanlamayı GitHub Actions'ın kendi cron'u yapar.
+// Worker makinesindeki Windows Görev Zamanlayıcı ("TrendyolYorumScraper" görevi,
+// bkz. scripts/run-scheduled-scrape-prod.ps1) tarafından çağrılır: node-cron ile
+// beklemek yerine tek seferlik çalışıp çıkar — zamanlamayı Görev Zamanlayıcı yapar.
 runScheduledScrape()
   .then(async (summary) => {
     console.log(`[scheduler] Tamamlandı: ${summary.succeeded}/${summary.attempted} başarılı, ${summary.failed} başarısız, ${summary.newReviews} yeni yorum.`);

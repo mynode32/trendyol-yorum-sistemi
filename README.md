@@ -43,15 +43,16 @@ kendi email/şifresiyle giriş yapar, sadece kendi ürünlerini görür.
    (WhatsApp/e-posta vb.) gönder; panelden şifresini kendisi değiştirebilir
    (`/admin/settings`).
 4. **Tarama otomatik başlar** — yeni ürünler, zaten çalışan tek paylaşımlı
-   worker'ın (`npm run scheduler:start`, her 3 saatte bir) taradığı listeye
+   worker'ın (`npm run scheduler:start`, haftada bir) taradığı listeye
    otomatik dahil olur; müşteri başına ayrı bir worker kurulumu gerekmez.
 5. **Widget kodunu ver** — admin panelde her ürünün "Widget kodu" butonu,
    müşterinin kendi sitesine yapıştıracağı `<script>` etiketini verir.
 
 Tek worker tüm hesapların ürünlerini sırayla tarar (bkz. "Scraper" bölümü) —
-bu, tek bir residential-IP makineye bağlı bir kapasite sınırıdır. Müşteri
-sayısı arttıkça taramalar 3 saatlik pencereye sığmayabilir; o noktada ikinci
-bir worker makinesi (aynı `DATABASE_URL`'e bağlı, ayrı bir residential IP)
+bu, tek bir residential-IP makineye bağlı bir kapasite sınırıdır. Haftalık
+tarama bu sınırı ciddi ölçüde gevşetir, ama müşteri sayısı çok artarsa
+taramalar haftalık pencereye de sığmayabilir; o noktada ikinci bir worker
+makinesi (aynı `DATABASE_URL`'e bağlı, ayrı bir residential IP)
 eklemek gerekir.
 
 Oturumlar 24 saat sonra sunucu tarafında geçersiz olur (`MAX_SESSION_AGE_MS`).
@@ -103,7 +104,7 @@ npm run scrape:once -- <trendyolProductId> <hesap-email>
 `<hesap-email>` sadece ürün henüz yoksa (yeni oluşturulurken) hangi hesaba
 bağlanacağını belirler — ürün zaten takipteyse yok sayılır.
 
-Zamanlanmış taramayı başlatmak (her 3 saatte bir, `isTracked=true` tüm ürünler sırayla):
+Zamanlanmış taramayı başlatmak (haftada bir, Pazartesi 03:00, `isTracked=true` tüm ürünler sırayla):
 
 ```bash
 npm run scheduler:start
@@ -112,6 +113,23 @@ npm run scheduler:start
 Scraper nezaket kuralları: istekler arası 1-3 sn rastgele gecikme, aynı anda tek ürün,
 429/403 durumunda 5s → 15s → 45s exponential backoff. Her çalıştırma `ScrapeLog`
 tablosuna yazılır ve admin panelin `/admin/scrape-logs` sayfasında görünür.
+
+### Production worker'ın zamanlamasını değiştirmek
+
+Production'da `npm run scheduler:start` değil, worker makinesindeki Windows
+Görev Zamanlayıcı'nın **"TrendyolYorumScraper"** görevi kullanılıyor — bu görev
+`scripts/run-scheduled-scrape-prod.ps1`'i (→ `npm run scheduler:run-once`, tek
+seferlik) tetikliyor. Zamanlamasını (örn. üç saatte birden haftada bire)
+değiştirmek için, **o worker makinesinde** PowerShell'de:
+
+```powershell
+$trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday -At 3am
+Set-ScheduledTask -TaskName "TrendyolYorumScraper" -Trigger $trigger
+```
+
+Bu, görevin işlemini (action) değiştirmeden sadece ne zaman çalışacağını
+günceller. Değişikliği doğrulamak için: `Get-ScheduledTaskInfo -TaskName
+"TrendyolYorumScraper"`.
 
 ### ⚠️ Dağıtım notu: scraper GÖRÜNÜR (headed) bir tarayıcı açar
 

@@ -31,7 +31,7 @@ describe("GET /api/admin/health", () => {
 
     await prisma.product.update({
       where: { id: fresh.id },
-      data: { lastScrapedAt: new Date(Date.now() - 7 * 60 * 60 * 1000) },
+      data: { lastScrapedAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000) },
     });
     const degraded = await GET();
     const body = await degraded.json();
