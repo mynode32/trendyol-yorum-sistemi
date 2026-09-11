@@ -123,15 +123,19 @@ export default function ScrapeLogsPage() {
             <tbody>
               {filteredLogs.map((log) => (
                 <tr key={log.id}>
-                  <td>{log.product.name}</td>
-                  <td>
+                  <td className="td-stack" data-label="Ürün">{log.product.name}</td>
+                  <td data-label="Durum">
                     <StatusBadge status={log.status} />
                   </td>
-                  <td style={{ fontFamily: "var(--font-mono)" }}>{log.newReviews}</td>
-                  <td style={{ color: "var(--text-muted)" }}>
+                  <td data-label="Yeni yorum" style={{ fontFamily: "var(--font-mono)" }}>{log.newReviews}</td>
+                  <td data-label="Başlangıç" style={{ color: "var(--text-muted)" }}>
                     {new Date(log.startedAt).toLocaleString("tr-TR")}
                   </td>
-                  <td style={{ whiteSpace: "normal", color: "var(--danger)", maxWidth: 320 }}>
+                  <td
+                    className="td-stack"
+                    data-label="Hata"
+                    style={{ whiteSpace: "normal", color: "var(--danger)", maxWidth: 320 }}
+                  >
                     {log.errorMessage ?? "—"}
                   </td>
                 </tr>

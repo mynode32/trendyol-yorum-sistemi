@@ -26,7 +26,7 @@ export default function AdminAppLayout({ children }: { children: React.ReactNode
           onLogout={logout}
         />
         <div className="admin-main">
-          <Topbar onMenuClick={() => setSidebarOpen((open) => !open)} />
+          <Topbar pathname={pathname} onMenuClick={() => setSidebarOpen((open) => !open)} />
           <div className="admin-content">{children}</div>
         </div>
       </div>

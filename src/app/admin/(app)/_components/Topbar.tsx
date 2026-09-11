@@ -1,6 +1,16 @@
 import { MenuIcon } from "./icons";
 
-export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
+const TITLES: { test: (pathname: string) => boolean; label: string }[] = [
+  { test: (p) => p.startsWith("/admin/products/") && p.includes("/reviews"), label: "Yorum Moderasyonu" },
+  { test: (p) => p.startsWith("/admin/products"), label: "Ürünler" },
+  { test: (p) => p.startsWith("/admin/scrape-logs"), label: "Scraper İzleme" },
+];
+
+function titleFor(pathname: string): string {
+  return TITLES.find(({ test }) => test(pathname))?.label ?? "Yönetim Paneli";
+}
+
+export function Topbar({ pathname, onMenuClick }: { pathname: string; onMenuClick: () => void }) {
   return (
     <header className="admin-topbar">
       <button
@@ -11,6 +21,7 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
       >
         <MenuIcon />
       </button>
+      <span className="admin-topbar__title">{titleFor(pathname)}</span>
     </header>
   );
 }

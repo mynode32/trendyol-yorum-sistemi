@@ -593,7 +593,7 @@ export default function ProductsPage() {
                   </tr>
                 )}
                 <tr>
-                  <td>
+                  <td data-label="Seç">
                     <input
                       type="checkbox"
                       checked={selectedIds.has(p.id)}
@@ -601,7 +601,7 @@ export default function ProductsPage() {
                       aria-label={`${p.name} seç`}
                     />
                   </td>
-                  <td style={{ whiteSpace: "normal", minWidth: 240, maxWidth: 320 }}>
+                  <td className="td-stack" data-label="Ürün" style={{ whiteSpace: "normal", minWidth: 240, maxWidth: 320 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       {p.imageUrl && (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -637,18 +637,18 @@ export default function ProductsPage() {
                       </div>
                     </div>
                   </td>
-                  <td>
+                  <td data-label="Durum">
                     <span className={`badge ${p.isTracked ? "badge-success" : "badge-neutral"}`}>
                       {p.isTracked ? "Takip ediliyor" : "Durduruldu"}
                     </span>
                   </td>
-                  <td>
+                  <td data-label="Sitede yorumlar">
                     {(() => {
                       const status = widgetStatus(p);
                       return <span className={`badge ${status.className}`}>{status.label}</span>;
                     })()}
                   </td>
-                  <td>
+                  <td data-label="Minimum puan">
                     <select
                       className="input"
                       style={{ height: 32, fontSize: 13, padding: "0 8px" }}
@@ -662,7 +662,7 @@ export default function ProductsPage() {
                       <option value="5">Sadece 5★</option>
                     </select>
                   </td>
-                  <td>
+                  <td data-label="Gösterilecek yorum">
                     <input
                       type="number"
                       min={1}
@@ -673,8 +673,8 @@ export default function ProductsPage() {
                       disabled={actionProductId === p.id}
                     />
                   </td>
-                  <td style={{ color: "var(--text-muted)" }}>{formatDate(p.lastScrapedAt)}</td>
-                  <td>
+                  <td data-label="Son tarama" style={{ color: "var(--text-muted)" }}>{formatDate(p.lastScrapedAt)}</td>
+                  <td data-label="Ayarlar">
                     <button
                       type="button"
                       className="btn btn-secondary btn-sm btn-icon"
@@ -684,7 +684,7 @@ export default function ProductsPage() {
                       <SettingsIcon />
                     </button>
                   </td>
-                  <td>
+                  <td className="td-stack td-actions" data-label="İşlemler">
                     <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
                       <a href={`/admin/products/${p.id}/reviews`} className="btn btn-secondary btn-sm">
                         Yorumlar

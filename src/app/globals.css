@@ -601,10 +601,20 @@ tbody tr:hover {
 .admin-topbar {
   display: none;
   align-items: center;
+  gap: 12px;
   height: 52px;
   padding: 0 16px;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
+}
+
+.admin-topbar__title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .admin-topbar__menu-btn {
@@ -665,7 +675,147 @@ tbody tr:hover {
   }
 
   .admin-page {
-    padding: 24px 16px 60px;
+    padding: 20px 14px 60px;
+  }
+
+  .page-header {
+    margin-bottom: 16px;
+  }
+
+  .hero-card {
+    padding: 18px 18px;
+    gap: 16px;
+  }
+
+  .hero-card__greeting-name {
+    font-size: 22px;
+  }
+
+  .hero-stat__value {
+    font-size: 24px;
+  }
+
+  .hero-card__stats {
+    gap: 24px;
+  }
+
+  /* Touch targets: dense desktop buttons/inputs get a bit more room to tap */
+  .btn-sm {
+    height: 36px;
+  }
+
+  .input {
+    height: 40px;
+  }
+
+  .filter-bar .input,
+  .filter-bar__select {
+    max-width: none;
+    flex: 1 1 100%;
+  }
+
+  .bulk-bar {
+    justify-content: flex-start;
+  }
+
+  .bulk-bar__actions {
+    width: 100%;
+  }
+
+  .bulk-bar__actions .btn {
+    flex: 1 1 0;
+  }
+
+  .pagination {
+    flex-wrap: wrap;
+    justify-content: center;
+    text-align: center;
+  }
+
+  /* ---------- tables become stacked cards ---------- */
+
+  .table-wrap {
+    border: none;
+    overflow-x: visible;
+    background: transparent;
+  }
+
+  .table-wrap table,
+  .table-wrap thead,
+  .table-wrap tbody,
+  .table-wrap tr {
+    display: block;
+    width: 100%;
+  }
+
+  .table-wrap thead {
+    display: none;
+  }
+
+  .table-wrap tbody tr {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    margin-bottom: 12px;
+    padding: 4px 14px;
+  }
+
+  .table-wrap tbody tr.table-group-row {
+    background: var(--accent-tint);
+    border: none;
+    padding: 0;
+    margin-bottom: 8px;
+  }
+
+  .table-wrap td {
+    display: block;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    white-space: normal;
+  }
+
+  .table-wrap tbody tr.table-group-row td {
+    padding: 8px 14px;
+    border-bottom: none;
+  }
+
+  .table-wrap tbody tr td:last-child {
+    border-bottom: none;
+  }
+
+  .table-wrap td[data-label] {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .table-wrap td[data-label]::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+  }
+
+  .table-wrap td.td-stack {
+    display: block;
+  }
+
+  .table-wrap td.td-stack::before {
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .table-wrap td.td-actions > div {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .table-wrap td.td-actions .btn {
+    flex: 1 1 auto;
   }
 }
 
