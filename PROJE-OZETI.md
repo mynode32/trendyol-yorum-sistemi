@@ -105,8 +105,9 @@ Kullanıcının açık talimatı: **"enwood sadece pilot müşteri, koda hiçbir
   tüm ürünleri tek yerden gören bir "Review Inbox" gibi) konuşuldu ama henüz
   yapılmadı — istenirse sıradaki iş olabilir.
 
-## Production erişim bilgileri (hatırlatma, gizli tutulmalı)
+## Production erişim bilgileri
 
 - Admin panel: https://trendyol-yorum-sistemi.vercel.app/admin/login
-- Pilot hesap: `enwood@ornek.com` / `enwood123` (istersen `/admin/settings`
-  üzerinden değiştir)
+- Pilot hesabın giriş şifresi buraya (git'e) yazılmaz — sadece sende, ayrı ve
+  güvenli bir yerde (parola yöneticisi vb.) tutulmalı. Gerekirse
+  `/admin/settings` üzerinden değiştirebilirsin.
