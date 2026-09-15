@@ -3,9 +3,13 @@ import { prisma } from "@/lib/db";
 import { createSessionToken } from "@/lib/auth/session";
 
 const { scrapeProductMock } = vi.hoisted(() => ({ scrapeProductMock: vi.fn() }));
-vi.mock("@/lib/scraper/persist", () => ({ scrapeProduct: scrapeProductMock }));
+vi.mock("@/lib/scraper/persist", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/scraper/persist")>("@/lib/scraper/persist");
+  return { ...actual, scrapeProduct: scrapeProductMock };
+});
 
 import { POST } from "./route";
+import { ScrapeConcurrencyLimitError, ScrapeInProgressError, ScrapeQuotaExceededError } from "@/lib/scraper/persist";
 
 let accountId: string;
 let otherAccountId: string;
@@ -83,5 +87,41 @@ describe("POST /api/admin/products/:id/scrape", () => {
     expect(failed.status).toBe(502);
     expect((await failed.json()).error.code).toBe("SCRAPE_FAILED");
     expect(unknown.status).toBe(404);
+  });
+
+  it("returns 409 SCRAPE_IN_PROGRESS when the product is already locked", async () => {
+    const product = await prisma.product.create({
+      data: { accountId, trendyolProductId: "p-3", trendyolUrl: "https://x", name: "Ürün" },
+    });
+    scrapeProductMock.mockRejectedValue(new ScrapeInProgressError());
+
+    const response = await POST(authedRequest(), { params: Promise.resolve({ id: product.id }) });
+
+    expect(response.status).toBe(409);
+    expect((await response.json()).error.code).toBe("SCRAPE_IN_PROGRESS");
+  });
+
+  it("returns 429 SCRAPE_CONCURRENCY_LIMIT when too many scrapes are already running", async () => {
+    const product = await prisma.product.create({
+      data: { accountId, trendyolProductId: "p-4", trendyolUrl: "https://x", name: "Ürün" },
+    });
+    scrapeProductMock.mockRejectedValue(new ScrapeConcurrencyLimitError());
+
+    const response = await POST(authedRequest(), { params: Promise.resolve({ id: product.id }) });
+
+    expect(response.status).toBe(429);
+    expect((await response.json()).error.code).toBe("SCRAPE_CONCURRENCY_LIMIT");
+  });
+
+  it("returns 429 SCRAPE_QUOTA_EXCEEDED when the product's daily scrape quota is used up", async () => {
+    const product = await prisma.product.create({
+      data: { accountId, trendyolProductId: "p-5", trendyolUrl: "https://x", name: "Ürün" },
+    });
+    scrapeProductMock.mockRejectedValue(new ScrapeQuotaExceededError());
+
+    const response = await POST(authedRequest(), { params: Promise.resolve({ id: product.id }) });
+
+    expect(response.status).toBe(429);
+    expect((await response.json()).error.code).toBe("SCRAPE_QUOTA_EXCEEDED");
   });
 });

@@ -5,6 +5,12 @@ import type { Product } from "@prisma/client";
 
 const UPDATE_BATCH_SIZE = 25;
 const SCRAPE_LOCK_MAX_AGE_MS = 15 * 60 * 1000;
+// Chromium worker'ın aynı anda kaç ürün taradığını sınırlar — tek makinede
+// çok sayıda paralel taramanın kaynakları tüketmesini önler.
+const MAX_CONCURRENT_SCRAPES = 2;
+// Bir üründe hatalı/döngüsel tetiklenen taramaların Trendyol'u aşırı yormasını
+// önlemek için ürün başına günlük üst sınır (manuel + zamanlı taramalar dahil).
+const DAILY_SCRAPE_QUOTA_PER_PRODUCT = 10;
 
 export class ScrapeInProgressError extends Error {
   constructor() {
@@ -13,9 +19,43 @@ export class ScrapeInProgressError extends Error {
   }
 }
 
+export class ScrapeConcurrencyLimitError extends Error {
+  constructor() {
+    super("Şu anda çok fazla tarama aktif, lütfen birazdan tekrar deneyin");
+    this.name = "ScrapeConcurrencyLimitError";
+  }
+}
+
+export class ScrapeQuotaExceededError extends Error {
+  constructor() {
+    super("Bu ürün için günlük tarama kotası doldu");
+    this.name = "ScrapeQuotaExceededError";
+  }
+}
+
+async function assertDailyQuotaNotExceeded(productId: string): Promise<void> {
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayCount = await prisma.scrapeLog.count({
+    where: { productId, startedAt: { gte: todayStart } },
+  });
+  if (todayCount >= DAILY_SCRAPE_QUOTA_PER_PRODUCT) throw new ScrapeQuotaExceededError();
+}
+
 async function acquireScrapeLock(productId: string): Promise<Date> {
+  await assertDailyQuotaNotExceeded(productId);
+
   const lockedAt = new Date();
   const staleBefore = new Date(lockedAt.getTime() - SCRAPE_LOCK_MAX_AGE_MS);
+
+  // Global eşzamanlılık kontrolü ile kilit ediniminin arası küçük bir yarış payı
+  // bırakır (iki istek limiti aynı anda geçebilir); bu, bir kaynak koruması
+  // olduğu için kabul edilebilir — bir sonraki istekte kendini düzeltir.
+  const activeCount = await prisma.product.count({
+    where: { scrapeLockedAt: { gte: staleBefore } },
+  });
+  if (activeCount >= MAX_CONCURRENT_SCRAPES) throw new ScrapeConcurrencyLimitError();
+
   const result = await prisma.product.updateMany({
     where: {
       id: productId,

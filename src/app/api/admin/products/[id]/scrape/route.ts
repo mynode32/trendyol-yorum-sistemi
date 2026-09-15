@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/api/errors";
-import { ScrapeInProgressError, scrapeProduct } from "@/lib/scraper/persist";
+import {
+  ScrapeConcurrencyLimitError,
+  ScrapeInProgressError,
+  ScrapeQuotaExceededError,
+  scrapeProduct,
+} from "@/lib/scraper/persist";
 import { getCurrentUser } from "@/lib/auth/currentUser";
 import { requireSameOrigin } from "@/lib/api/csrf";
 import { PRODUCT_MANAGERS, requireRole } from "@/lib/auth/authorization";
@@ -46,6 +51,12 @@ export async function POST(
   } catch (error) {
     if (error instanceof ScrapeInProgressError) {
       return jsonError("SCRAPE_IN_PROGRESS", "Bu ürün için zaten devam eden bir tarama var", 409);
+    }
+    if (error instanceof ScrapeConcurrencyLimitError) {
+      return jsonError("SCRAPE_CONCURRENCY_LIMIT", error.message, 429);
+    }
+    if (error instanceof ScrapeQuotaExceededError) {
+      return jsonError("SCRAPE_QUOTA_EXCEEDED", error.message, 429);
     }
     throw error;
   }

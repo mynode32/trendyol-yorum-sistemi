@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
 import { prisma } from "@/lib/db";
-import { scrapeProduct } from "./persist";
+import { ScrapeConcurrencyLimitError, ScrapeQuotaExceededError, scrapeProduct } from "./persist";
 import * as client from "./trendyolClient";
 
 describe("scrapeProduct", () => {
@@ -193,5 +193,47 @@ describe("scrapeProduct", () => {
     const logs = await prisma.scrapeLog.findMany({ where: { productId: product.id } });
     expect(logs[0].status).toBe("failed");
     expect(logs[0].errorMessage).toContain("network error");
+  });
+
+  it("rejects when the product already hit its daily scrape quota", async () => {
+    const product = await prisma.product.create({
+      data: { accountId, trendyolProductId: "p-8", trendyolUrl: "https://x", name: "Ürün 8" },
+    });
+    await prisma.scrapeLog.createMany({
+      data: Array.from({ length: 10 }, () => ({
+        productId: product.id,
+        status: "success",
+        startedAt: new Date(),
+        finishedAt: new Date(),
+        newReviews: 0,
+      })),
+    });
+
+    await expect(scrapeProduct(product.id)).rejects.toBeInstanceOf(ScrapeQuotaExceededError);
+  });
+
+  it("rejects when the global concurrent scrape limit is already reached", async () => {
+    await Promise.all(
+      Array.from({ length: 2 }, (_, i) =>
+        prisma.product.create({
+          data: {
+            accountId,
+            trendyolProductId: `p-locked-${i}`,
+            trendyolUrl: "https://x",
+            name: `Kilitli Ürün ${i}`,
+            scrapeLockedAt: new Date(),
+          },
+        })
+      )
+    );
+    const product = await prisma.product.create({
+      data: { accountId, trendyolProductId: "p-9", trendyolUrl: "https://x", name: "Ürün 9" },
+    });
+
+    await expect(scrapeProduct(product.id)).rejects.toBeInstanceOf(ScrapeConcurrencyLimitError);
+
+    // Aktif taramalarla ilgisi olmayan ürünün kilidi hâlâ boş olmalı.
+    const untouched = await prisma.product.findUniqueOrThrow({ where: { id: product.id } });
+    expect(untouched.scrapeLockedAt).toBeNull();
   });
 });

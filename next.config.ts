@@ -12,13 +12,8 @@ const nextConfig: NextConfig = {
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
           { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
-          {
-            // Next'in hydration script'leri için unsafe-inline gerekir; yine de
-            // harici script, object ve form hedeflerini sınırlarız.
-            key: "Content-Security-Policy",
-            value:
-              "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:",
-          },
+          // Content-Security-Policy başlığı src/middleware.ts tarafından, istek
+          // başına üretilen nonce ile birlikte set edilir.
           ...(process.env.NODE_ENV === "production"
             ? [{ key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" }]
             : []),

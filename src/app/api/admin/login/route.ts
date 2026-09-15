@@ -50,7 +50,11 @@ export async function POST(request: Request) {
   const ipRateLimitKey = `ip:${key}`;
   const emailRateLimitKey = `email:${normalizedEmail}`;
 
-  if (isRateLimited(ipRateLimitKey) || isRateLimited(emailRateLimitKey)) {
+  const [ipLimited, emailLimited] = await Promise.all([
+    isRateLimited(ipRateLimitKey),
+    isRateLimited(emailRateLimitKey),
+  ]);
+  if (ipLimited || emailLimited) {
     return NextResponse.json(
       { error: { code: "RATE_LIMITED", message: "Çok fazla başarısız deneme. Lütfen daha sonra tekrar deneyin." } },
       { status: 429 }
@@ -63,16 +67,17 @@ export async function POST(request: Request) {
   const passwordValid = await verifyPassword(parsed.data.password, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
 
   if (!user || !passwordValid) {
-    registerFailedLoginAttempt(ipRateLimitKey);
-    registerFailedLoginAttempt(emailRateLimitKey);
+    await Promise.all([
+      registerFailedLoginAttempt(ipRateLimitKey),
+      registerFailedLoginAttempt(emailRateLimitKey),
+    ]);
     return NextResponse.json(
       { error: { code: "INVALID_CREDENTIALS", message: "Email veya şifre hatalı" } },
       { status: 401 }
     );
   }
 
-  clearLoginAttempts(ipRateLimitKey);
-  clearLoginAttempts(emailRateLimitKey);
+  await Promise.all([clearLoginAttempts(ipRateLimitKey), clearLoginAttempts(emailRateLimitKey)]);
   const token = createSessionToken(user.id, user.sessionVersion);
   const response = NextResponse.json({ ok: true });
   response.cookies.set("ty_admin_session", token, {

@@ -1,6 +1,25 @@
+import { Redis } from "@upstash/redis";
+
 const WINDOW_MS = 15 * 60 * 1000;
+const WINDOW_SECONDS = WINDOW_MS / 1000;
 const MAX_ATTEMPTS = 5;
 const MAX_TRACKED_KEYS = 10_000;
+
+// Vercel gibi çoklu-instance/serverless ortamlarda process-memory limit instance'lar
+// arasında paylaşılmaz. UPSTASH_REDIS_REST_URL/TOKEN tanımlıysa merkezi Redis tabanlı
+// limit kullanılır; tanımlı değilse (yerel geliştirme, testler) tek-instance bellek
+// tabanlı limite düşer.
+const redis =
+  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+    ? new Redis({
+        url: process.env.UPSTASH_REDIS_REST_URL,
+        token: process.env.UPSTASH_REDIS_REST_TOKEN,
+      })
+    : null;
+
+function redisKey(key: string): string {
+  return `login-rate-limit:${key}`;
+}
 
 const attemptsByKey = new Map<string, { count: number; windowStartedAt: number }>();
 
@@ -18,12 +37,17 @@ function makeRoom(now: number): void {
   if (oldestKey) attemptsByKey.delete(oldestKey);
 }
 
-/** Test yardımcı fonksiyonu — modül seviyesindeki durumu sıfırlar. */
+/** Test yardımcı fonksiyonu — modül seviyesindeki bellek-içi durumu sıfırlar. */
 export function resetLoginRateLimiter(): void {
   attemptsByKey.clear();
 }
 
-export function isRateLimited(key: string): boolean {
+export async function isRateLimited(key: string): Promise<boolean> {
+  if (redis) {
+    const count = await redis.get<number>(redisKey(key));
+    return (count ?? 0) >= MAX_ATTEMPTS;
+  }
+
   const entry = attemptsByKey.get(key);
   if (!entry) return false;
   if (Date.now() - entry.windowStartedAt > WINDOW_MS) {
@@ -33,7 +57,14 @@ export function isRateLimited(key: string): boolean {
   return entry.count >= MAX_ATTEMPTS;
 }
 
-export function registerFailedLoginAttempt(key: string): void {
+export async function registerFailedLoginAttempt(key: string): Promise<void> {
+  if (redis) {
+    const count = await redis.incr(redisKey(key));
+    // Sadece pencereyi yeni açan istek TTL basar; sonraki INCR'lar süreyi uzatmaz.
+    if (count === 1) await redis.expire(redisKey(key), WINDOW_SECONDS);
+    return;
+  }
+
   const entry = attemptsByKey.get(key);
   const now = Date.now();
   if (!entry || now - entry.windowStartedAt > WINDOW_MS) {
@@ -44,6 +75,10 @@ export function registerFailedLoginAttempt(key: string): void {
   entry.count += 1;
 }
 
-export function clearLoginAttempts(key: string): void {
+export async function clearLoginAttempts(key: string): Promise<void> {
+  if (redis) {
+    await redis.del(redisKey(key));
+    return;
+  }
   attemptsByKey.delete(key);
 }
