@@ -5,6 +5,13 @@ import { getCurrentUser } from "@/lib/auth/currentUser";
 
 const DEFAULT_PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 100;
+const MAX_PAGE = 1000;
+
+function parseBoundedPositiveInt(value: string | null, fallback: number, max: number): number {
+  if (!value || !/^\d+$/.test(value)) return fallback;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed >= 1 ? Math.min(parsed, max) : fallback;
+}
 
 export async function GET(
   request: Request,
@@ -23,25 +30,31 @@ export async function GET(
 
   const url = new URL(request.url);
 
-  const page = Math.max(1, Number(url.searchParams.get("page")) || 1);
-  const pageSize = Math.min(
-    MAX_PAGE_SIZE,
-    Math.max(1, Number(url.searchParams.get("pageSize")) || DEFAULT_PAGE_SIZE)
+  const page = parseBoundedPositiveInt(url.searchParams.get("page"), 1, MAX_PAGE);
+  const pageSize = parseBoundedPositiveInt(
+    url.searchParams.get("pageSize"),
+    DEFAULT_PAGE_SIZE,
+    MAX_PAGE_SIZE
   );
 
-  const search = url.searchParams.get("search")?.trim();
+  const search = url.searchParams.get("search")?.trim().slice(0, 200);
   const ratingParam = Number(url.searchParams.get("rating"));
   const rating = Number.isInteger(ratingParam) && ratingParam >= 1 && ratingParam <= 5 ? ratingParam : undefined;
+
+  // PostgreSQL'in varsayılan (Türkçe olmayan) kolasyonu, İ/i çiftini ILIKE
+  // ile her zaman eşleştirmez. Türkçe büyük harf varyantını da arayarak admin
+  // aramasının hem yorumda hem isimde tutarlı kalmasını sağlıyoruz.
+  const searchVariants = search ? [...new Set([search, search.toLocaleUpperCase("tr-TR")])] : [];
 
   const where = {
     productId: id,
     ...(rating ? { rating } : {}),
-    ...(search
+    ...(searchVariants.length > 0
       ? {
-          OR: [
-            { comment: { contains: search, mode: "insensitive" as const } },
-            { authorName: { contains: search, mode: "insensitive" as const } },
-          ],
+          OR: searchVariants.flatMap((term) => [
+            { comment: { contains: term, mode: "insensitive" as const } },
+            { authorName: { contains: term, mode: "insensitive" as const } },
+          ]),
         }
       : {}),
   };

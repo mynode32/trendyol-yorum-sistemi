@@ -24,8 +24,9 @@ export class InvalidQueryError extends Error {
 
 const MAX_PAGE_SIZE = 100;
 const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE = 1000;
 
-const positiveIntSchema = z.coerce.number().int().min(1);
+const positiveIntSchema = z.coerce.number().int().min(1).max(MAX_PAGE);
 const starSchema = z.coerce.number().int().min(1).max(5);
 const sortSchema = z.enum(["newest", "oldest", "mostHelpful", "longest"]);
 const hasPhotoSchema = z.enum(["true", "false"]);
@@ -60,6 +61,9 @@ export function parseReviewQuery(searchParams: URLSearchParams): ReviewQuery {
   const starsParam = searchParams.get("stars");
   let stars: number[] | undefined;
   if (starsParam) {
+    if (starsParam.length > 20) {
+      issues.push("stars: değer çok uzun");
+    }
     const parsed = starsParam
       .split(",")
       .map((value) => validate("stars", value.trim(), starSchema));

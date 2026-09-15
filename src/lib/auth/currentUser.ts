@@ -8,6 +8,7 @@ export type CurrentUser = {
   email: string;
   accountId: string;
   accountName: string;
+  role: "OWNER" | "ADMIN" | "VIEWER";
 };
 
 function getSessionToken(request: Request): string | null {
@@ -31,12 +32,15 @@ export async function getCurrentUser(request: Request): Promise<CurrentUser | nu
     where: { id: session.userId },
     include: { account: true },
   });
-  if (!user) return null;
+  // Şifre değişince sessionVersion artırılır. Böylece çalınmış/eski cookie,
+  // kendi 24 saatlik ömrünü beklemeden geçersiz olur.
+  if (!user || user.sessionVersion !== session.sessionVersion) return null;
 
   return {
     userId: user.id,
     email: user.email,
     accountId: user.accountId,
     accountName: user.account.name,
+    role: user.role,
   };
 }

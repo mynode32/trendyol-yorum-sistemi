@@ -7,7 +7,7 @@ import { GET, PATCH } from "./route";
 function authedRequest(url: string, token: string, init: RequestInit = {}) {
   return new Request(url, {
     ...init,
-    headers: { ...init.headers, cookie: `ty_admin_session=${token}` },
+    headers: { ...init.headers, cookie: `ty_admin_session=${token}`, origin: "http://localhost" },
   });
 }
 
@@ -32,7 +32,7 @@ describe("GET /api/admin/me", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body).toEqual({ email: "owner@example.com", accountName: "some-customer" });
+    expect(body).toEqual({ email: "owner@example.com", accountName: "some-customer", role: "OWNER" });
   });
 
   it("returns 401 without a valid session cookie", async () => {
@@ -76,9 +76,15 @@ describe("PATCH /api/admin/me (password change)", () => {
     );
 
     expect(response.status).toBe(200);
+    expect(response.headers.get("set-cookie")).toContain("ty_admin_session=");
     const updated = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
     expect(await verifyPassword("new-password-123", updated.passwordHash)).toBe(true);
     expect(await verifyPassword("old-password", updated.passwordHash)).toBe(false);
+    expect(updated.sessionVersion).toBe(1);
+
+    // Şifre değişimi, çalınmış olabilecek eski cookie'yi anında geçersiz kılar.
+    const oldSessionResponse = await GET(authedRequest("http://localhost/api/admin/me", token));
+    expect(oldSessionResponse.status).toBe(401);
   });
 
   it("returns 401 INVALID_CREDENTIALS and leaves the password unchanged when currentPassword is wrong", async () => {

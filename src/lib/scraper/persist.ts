@@ -4,6 +4,37 @@ import { syncDisplayedReviews } from "./displaySync";
 import type { Product } from "@prisma/client";
 
 const UPDATE_BATCH_SIZE = 25;
+const SCRAPE_LOCK_MAX_AGE_MS = 15 * 60 * 1000;
+
+export class ScrapeInProgressError extends Error {
+  constructor() {
+    super("Bu ürün için zaten devam eden bir tarama var");
+    this.name = "ScrapeInProgressError";
+  }
+}
+
+async function acquireScrapeLock(productId: string): Promise<Date> {
+  const lockedAt = new Date();
+  const staleBefore = new Date(lockedAt.getTime() - SCRAPE_LOCK_MAX_AGE_MS);
+  const result = await prisma.product.updateMany({
+    where: {
+      id: productId,
+      OR: [{ scrapeLockedAt: null }, { scrapeLockedAt: { lt: staleBefore } }],
+    },
+    data: { scrapeLockedAt: lockedAt },
+  });
+  if (result.count !== 1) throw new ScrapeInProgressError();
+  return lockedAt;
+}
+
+async function releaseScrapeLock(productId: string, lockedAt: Date): Promise<void> {
+  // Eski bir worker, süresi dolmuş kilidi devralan yeni worker'ın kilidini
+  // kaldıramasın diye tam kendi timestamp'i üzerinden bırakıyoruz.
+  await prisma.product.updateMany({
+    where: { id: productId, scrapeLockedAt: lockedAt },
+    data: { scrapeLockedAt: null },
+  });
+}
 
 type StoredReviewData = {
   productId: string;
@@ -66,10 +97,13 @@ async function fetchProductNameAndImage(
 export async function scrapeProduct(
   productId: string
 ): Promise<{ status: "success" | "failed"; newReviews: number }> {
-  const product = await prisma.product.findUniqueOrThrow({ where: { id: productId } });
-  const startedAt = new Date();
+  const lockedAt = await acquireScrapeLock(productId);
 
   try {
+    const product = await prisma.product.findUniqueOrThrow({ where: { id: productId } });
+    const startedAt = new Date();
+
+    try {
     const fetchedReviews = await fetchAllReviews(product.trendyolProductId);
     // minRating ayarlanmışsa bu eşiğin altındaki yorumlar hiç depolanmaz.
     const reviews =
@@ -122,18 +156,21 @@ export async function scrapeProduct(
     });
 
     return { status: "success", newReviews: newCount };
-  } catch (error) {
-    await prisma.scrapeLog.create({
-      data: {
-        productId: product.id,
-        startedAt,
-        finishedAt: new Date(),
-        status: "failed",
-        newReviews: 0,
-        errorMessage: error instanceof Error ? error.message : String(error),
-      },
-    });
+    } catch (error) {
+      await prisma.scrapeLog.create({
+        data: {
+          productId: product.id,
+          startedAt,
+          finishedAt: new Date(),
+          status: "failed",
+          newReviews: 0,
+          errorMessage: error instanceof Error ? error.message : String(error),
+        },
+      });
 
-    return { status: "failed", newReviews: 0 };
+      return { status: "failed", newReviews: 0 };
+    }
+  } finally {
+    await releaseScrapeLock(productId, lockedAt);
   }
 }

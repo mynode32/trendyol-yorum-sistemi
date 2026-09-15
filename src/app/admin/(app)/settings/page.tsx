@@ -3,8 +3,15 @@ import { useEffect, useState } from "react";
 import { adminFetch } from "@/lib/adminFetch";
 import { useToast } from "../_components/Toast";
 
-type Me = { email: string; accountName: string };
-type Member = { id: string; email: string; createdAt: string };
+type Role = "OWNER" | "ADMIN" | "VIEWER";
+type Me = { email: string; accountName: string; role: Role };
+type Member = { id: string; email: string; role: Role; createdAt: string };
+
+const ROLE_LABELS: Record<Role, string> = {
+  OWNER: "Hesap sahibi",
+  ADMIN: "Yönetici",
+  VIEWER: "Görüntüleyici",
+};
 
 function formatDate(value: string): string {
   return new Date(value).toLocaleDateString("tr-TR", { day: "2-digit", month: "short", year: "numeric" });
@@ -22,8 +29,10 @@ export default function SettingsPage() {
 
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const [newMemberPassword, setNewMemberPassword] = useState("");
+  const [newMemberRole, setNewMemberRole] = useState<"ADMIN" | "VIEWER">("VIEWER");
   const [addingMember, setAddingMember] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [updatingRoleId, setUpdatingRoleId] = useState<string | null>(null);
 
   async function loadMembers() {
     const res = await adminFetch("/api/admin/users");
@@ -35,12 +44,13 @@ export default function SettingsPage() {
   useEffect(() => {
     adminFetch("/api/admin/me")
       .then((res) => (res.ok ? res.json() : null))
-      .then((body) => setMe(body))
+      .then((body: Me | null) => {
+        setMe(body);
+        if (body?.role === "OWNER") void loadMembers();
+      })
       .catch(() => {});
     // İlk veri yüklemesi ağ yanıtından sonra state'i günceller; kural bu async
     // yardımcıyı doğrudan effect içinde çağırmayı yine de işaretler.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadMembers();
   }, []);
 
   async function changePassword(e: React.FormEvent) {
@@ -84,7 +94,7 @@ export default function SettingsPage() {
       const res = await adminFetch("/api/admin/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: newMemberEmail, password: newMemberPassword }),
+        body: JSON.stringify({ email: newMemberEmail, password: newMemberPassword, role: newMemberRole }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
@@ -97,6 +107,7 @@ export default function SettingsPage() {
       showToast("Kullanıcı eklendi.");
       setNewMemberEmail("");
       setNewMemberPassword("");
+      setNewMemberRole("VIEWER");
       await loadMembers();
     } finally {
       setAddingMember(false);
@@ -117,6 +128,27 @@ export default function SettingsPage() {
       await loadMembers();
     } finally {
       setRemovingId(null);
+    }
+  }
+
+  async function updateMemberRole(member: Member, role: Role) {
+    if (role === member.role) return;
+    setUpdatingRoleId(member.id);
+    try {
+      const res = await adminFetch(`/api/admin/users/${member.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        showToast(body?.error?.message ?? "Rol değiştirilemedi.", "error");
+        return;
+      }
+      showToast("Kullanıcı rolü güncellendi.");
+      await loadMembers();
+    } finally {
+      setUpdatingRoleId(null);
     }
   }
 
@@ -153,7 +185,7 @@ export default function SettingsPage() {
               className="input"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              minLength={8}
+              minLength={12}
               required
             />
           </div>
@@ -165,7 +197,7 @@ export default function SettingsPage() {
               className="input"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              minLength={8}
+              minLength={12}
               required
             />
           </div>
@@ -175,7 +207,7 @@ export default function SettingsPage() {
         </form>
       </div>
 
-      <div className="card" style={{ maxWidth: 560 }}>
+      {me?.role === "OWNER" && <div className="card" style={{ maxWidth: 560 }}>
         <h2 style={{ fontSize: 16, marginBottom: 4 }}>Ekip Üyeleri</h2>
         <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 16 }}>
           Bu hesaba giriş yapabilecek kişiler. Yeni birini eklerken şifreyi kendiniz belirleyip
@@ -210,19 +242,33 @@ export default function SettingsPage() {
                     )}
                   </div>
                   <div style={{ fontSize: 12, color: "var(--text-faint)" }}>
-                    {formatDate(member.createdAt)} tarihinde eklendi
+                    {ROLE_LABELS[member.role]} · {formatDate(member.createdAt)} tarihinde eklendi
                   </div>
                 </div>
-                {me?.email !== member.email && (
-                  <button
-                    type="button"
-                    className="btn btn-danger btn-sm"
-                    onClick={() => removeMember(member)}
-                    disabled={removingId === member.id}
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <select
+                    className="input"
+                    aria-label={`${member.email} rolü`}
+                    value={member.role}
+                    onChange={(event) => void updateMemberRole(member, event.target.value as Role)}
+                    disabled={updatingRoleId === member.id}
+                    style={{ width: 140, padding: "5px 8px" }}
                   >
-                    Çıkar
-                  </button>
-                )}
+                    {Object.entries(ROLE_LABELS).map(([role, label]) => (
+                      <option key={role} value={role}>{label}</option>
+                    ))}
+                  </select>
+                  {me.email !== member.email && (
+                    <button
+                      type="button"
+                      className="btn btn-danger btn-sm"
+                      onClick={() => removeMember(member)}
+                      disabled={removingId === member.id}
+                    >
+                      Çıkar
+                    </button>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
@@ -252,15 +298,27 @@ export default function SettingsPage() {
               className="input"
               value={newMemberPassword}
               onChange={(e) => setNewMemberPassword(e.target.value)}
-              minLength={8}
+              minLength={12}
               required
             />
+          </div>
+          <div className="field" style={{ flex: "1 1 140px" }}>
+            <label htmlFor="newMemberRole">Rol</label>
+            <select
+              id="newMemberRole"
+              className="input"
+              value={newMemberRole}
+              onChange={(event) => setNewMemberRole(event.target.value as "ADMIN" | "VIEWER")}
+            >
+              <option value="VIEWER">Görüntüleyici</option>
+              <option value="ADMIN">Yönetici</option>
+            </select>
           </div>
           <button type="submit" className="btn btn-secondary" disabled={addingMember}>
             {addingMember ? "Ekleniyor…" : "Ekle"}
           </button>
         </form>
-      </div>
+      </div>}
     </div>
   );
 }

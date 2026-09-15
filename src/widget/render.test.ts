@@ -109,6 +109,47 @@ describe("renderReviewWidget", () => {
     expect(container.shadowRoot!.innerHTML).toContain("&lt;script&gt;");
   });
 
+  it("rejects javascript: URLs in the configurable store link and review photos", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.includes("/summary")) {
+          return Promise.resolve(new Response(JSON.stringify({ averageRating: 5, totalReviews: 1 })));
+        }
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [
+                {
+                  id: "1",
+                  rating: 5,
+                  comment: "Güvenli",
+                  authorName: "A",
+                  hasPhoto: true,
+                  photoUrls: ["javascript:alert(1)", "https://cdn.example/photo.jpg"],
+                  reviewDate: "2026-01-01",
+                },
+              ],
+              pagination: { page: 1, pageSize: 20, total: 1 },
+            })
+          )
+        );
+      })
+    );
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    await renderReviewWidget(container, {
+      apiBaseUrl: "http://localhost",
+      productId: "prod-1",
+      storeUrl: "javascript:alert(1)",
+    });
+
+    expect(container.shadowRoot!.querySelector(".ty-widget__store-link")).toBeNull();
+    const photoUrls = [...container.shadowRoot!.querySelectorAll(".ty-widget__item-photo")].map((image) => image.getAttribute("src"));
+    expect(photoUrls).toEqual(["https://cdn.example/photo.jpg"]);
+  });
+
   it("shows the error message instead of throwing when the API returns a non-2xx response", async () => {
     vi.stubGlobal(
       "fetch",

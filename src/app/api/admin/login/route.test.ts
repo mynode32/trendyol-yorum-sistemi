@@ -7,7 +7,7 @@ import { POST } from "./route";
 function loginRequest(email: string, password: string, ip = "9.9.9.9") {
   return new Request("http://localhost/api/admin/login", {
     method: "POST",
-    headers: { "x-forwarded-for": ip },
+    headers: { "x-forwarded-for": ip, origin: "http://localhost" },
     body: JSON.stringify({ email, password }),
   });
 }
@@ -37,6 +37,17 @@ describe("POST /api/admin/login", () => {
     const response = await POST(loginRequest("owner@example.com", "correct-password"));
     expect(response.status).toBe(200);
     expect(response.headers.get("set-cookie")).toContain("ty_admin_session=");
+  });
+
+  it("rejects a cross-origin login attempt", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/admin/login", {
+        method: "POST",
+        headers: { origin: "https://evil.example" },
+        body: JSON.stringify({ email: "owner@example.com", password: "correct-password" }),
+      })
+    );
+    expect(response.status).toBe(403);
   });
 
   it("rejects an unknown email", async () => {
@@ -69,20 +80,21 @@ describe("POST /api/admin/login", () => {
     expect(response.status).toBe(429);
   });
 
-  it("does not rate limit a different IP", async () => {
+  it("rate limits the account even when an attacker rotates the IP header", async () => {
     for (let i = 0; i < 5; i++) {
       await POST(loginRequest("owner@example.com", "wrong", "1.1.1.1"));
     }
 
     const response = await POST(loginRequest("owner@example.com", "wrong", "2.2.2.2"));
-    expect(response.status).toBe(401);
+    expect(response.status).toBe(429);
   });
 
   it("returns 400 for malformed or invalid request bodies", async () => {
-    const malformed = await POST(new Request("http://localhost/api/admin/login", { method: "POST", body: "{" }));
+    const malformed = await POST(new Request("http://localhost/api/admin/login", { method: "POST", headers: { origin: "http://localhost" }, body: "{" }));
     const emptyPassword = await POST(
       new Request("http://localhost/api/admin/login", {
         method: "POST",
+        headers: { origin: "http://localhost" },
         body: JSON.stringify({ email: "owner@example.com", password: "" }),
       })
     );

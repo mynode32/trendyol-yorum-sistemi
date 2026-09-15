@@ -1,19 +1,25 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { jsonError } from "@/lib/api/errors";
+import { getCurrentUser } from "@/lib/auth/currentUser";
 
 // Tarama artık haftada bir çalışıyor (bkz. scripts/run-scheduler.ts); eşik,
 // bir çalıştırmanın gecikmesine tolerans tanımak için 7 günden biraz fazla.
 const STALE_AFTER_MS = 8 * 24 * 60 * 60 * 1000;
 
-/** Yöneticiye açık, izleme sistemlerinin de oturumla çağırabileceği durum özeti. */
-export async function GET() {
+/** Her hesabın yalnızca kendi tarama durumunu görebildiği izleme özeti. */
+export async function GET(request: Request) {
+  const currentUser = await getCurrentUser(request);
+  if (!currentUser) return jsonError("UNAUTHORIZED", "Giriş yapmanız gerekiyor", 401);
+
   try {
     const [trackedProducts, lastLog] = await Promise.all([
       prisma.product.findMany({
-        where: { isTracked: true },
+        where: { isTracked: true, accountId: currentUser.accountId },
         select: { id: true, lastScrapedAt: true },
       }),
       prisma.scrapeLog.findFirst({
+        where: { product: { accountId: currentUser.accountId } },
         orderBy: { startedAt: "desc" },
         select: { status: true, startedAt: true, errorMessage: true },
       }),

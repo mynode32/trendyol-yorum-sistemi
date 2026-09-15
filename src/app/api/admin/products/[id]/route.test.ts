@@ -10,7 +10,7 @@ let sessionCookie: string;
 function authedRequest(url: string, init: RequestInit = {}) {
   return new Request(url, {
     ...init,
-    headers: { ...init.headers, cookie: `ty_admin_session=${sessionCookie}` },
+    headers: { ...init.headers, cookie: `ty_admin_session=${sessionCookie}`, origin: "http://localhost" },
   });
 }
 

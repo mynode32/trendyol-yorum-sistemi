@@ -9,7 +9,7 @@ let ownerId: string;
 let sessionCookie: string;
 
 function authedRequest(url: string) {
-  return new Request(url, { method: "DELETE", headers: { cookie: `ty_admin_session=${sessionCookie}` } });
+  return new Request(url, { method: "DELETE", headers: { cookie: `ty_admin_session=${sessionCookie}`, origin: "http://localhost" } });
 }
 
 describe("DELETE /api/admin/users/:id", () => {

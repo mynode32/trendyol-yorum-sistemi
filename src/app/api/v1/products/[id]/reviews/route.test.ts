@@ -44,6 +44,9 @@ describe("GET /api/v1/products/:id/reviews", () => {
     expect(response.status).toBe(200);
     expect(body.data).toHaveLength(1);
     expect(body.data[0].trendyolReviewId).toBe("r1");
+    expect(body.data[0]).not.toHaveProperty("isHidden");
+    expect(body.data[0]).not.toHaveProperty("isApproved");
+    expect(body.data[0]).not.toHaveProperty("isDisplayed");
     expect(body.pagination).toMatchObject({ page: 1, pageSize: 20, total: 1 });
     expect(response.headers.get("Cache-Control")).toBe(
       "public, max-age=60, s-maxage=60, stale-while-revalidate=300"

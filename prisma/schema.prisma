@@ -28,7 +28,32 @@ model User {
   account      Account  @relation(fields: [accountId], references: [id])
   email        String   @unique
   passwordHash String
+  role         UserRole @default(OWNER)
+  // Parola değiştiğinde artırılır; eski imzalı oturumları anında geçersiz kılar.
+  sessionVersion Int    @default(0)
   createdAt    DateTime @default(now())
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  VIEWER
+}
+
+// Hesap silinirse eski denetim izi korunabilsin diye Account/User'a foreign key
+// bağlamıyoruz; accountId ve actorUserId salt referans olarak tutulur.
+model AuditLog {
+  id          String   @id @default(cuid())
+  accountId   String
+  actorUserId String
+  action      String
+  targetType  String
+  targetId    String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([accountId, createdAt])
+  @@index([targetType, targetId])
 }
 
 model Product {
@@ -53,6 +78,8 @@ model Product {
   // Aynı ürünün farklı boy/beden varyantlarını birbirine bağlar; doldurulursa bu
   // değeri paylaşan ürünlerin yorumları birlikte (havuzlanmış) gösterilir.
   reviewGroupId     String?
+  // Atomik updateMany koşuluyla kullanılan dağıtık tarama kilidi.
+  scrapeLockedAt    DateTime?
   lastScrapedAt     DateTime?
   createdAt         DateTime    @default(now())
   reviews           Review[]

@@ -47,6 +47,18 @@ export async function GET(
       orderBy: buildReviewOrderBy(query),
       skip,
       take: query.pageSize,
+      // Moderasyon ve kaynak kimlikleri istemciye sızmasın; widget'ın ihtiyaç
+      // duyduğu güvenli görünüm alanlarını açıkça seçiyoruz.
+      select: {
+        id: true,
+        trendyolReviewId: true,
+        rating: true,
+        comment: true,
+        authorName: true,
+        hasPhoto: true,
+        photoUrls: true,
+        reviewDate: true,
+      },
     }),
     prisma.review.count({ where }),
   ]);

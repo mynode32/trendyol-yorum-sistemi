@@ -24,7 +24,7 @@ describe("createAccount", () => {
   it("creates an account and its first user", async () => {
     const db = fakeDb();
 
-    const result = await createAccount(db as never, "owner@example.com", "s3cret-pass", "some-customer");
+    const result = await createAccount(db as never, "owner@example.com", "s3cret-pass-12", "some-customer");
 
     expect(db.account.create).toHaveBeenCalledWith({ data: { name: "some-customer" } });
     expect(db.user.create).toHaveBeenCalledWith({
@@ -41,10 +41,20 @@ describe("createAccount", () => {
   it("stores a bcrypt hash, not the plaintext password", async () => {
     const db = fakeDb();
 
-    await createAccount(db as never, "owner@example.com", "s3cret-pass", "some-customer");
+    await createAccount(db as never, "owner@example.com", "s3cret-pass-12", "some-customer");
 
     const passedHash = db.user.create.mock.calls[0][0].data.passwordHash;
-    expect(passedHash).not.toBe("s3cret-pass");
+    expect(passedHash).not.toBe("s3cret-pass-12");
     expect(passedHash).toMatch(/^\$2[aby]\$/);
+  });
+
+  it("rejects a weak initial password before creating any records", async () => {
+    const db = fakeDb();
+
+    await expect(createAccount(db as never, "owner@example.com", "too-short", "some-customer")).rejects.toThrow(
+      "en az 12 karakter"
+    );
+    expect(db.account.create).not.toHaveBeenCalled();
+    expect(db.user.create).not.toHaveBeenCalled();
   });
 });

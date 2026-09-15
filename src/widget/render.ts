@@ -58,6 +58,15 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
+function safeExternalUrl(value: string): string | null {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
 function injectStylesOnce(root: ShadowRoot) {
   if (root.querySelector(`#${STYLE_TAG_ID}`)) return;
   const style = document.createElement("style");
@@ -189,8 +198,9 @@ function renderShell(
         </select>
       </div>`;
 
-  const storeLink = shellOptions.storeUrl
-    ? `<a class="ty-widget__store-link" href="${escapeHtml(shellOptions.storeUrl)}" target="_blank" rel="noreferrer">Trendyol mağazamızı görüntüleyin ↗</a>`
+  const safeStoreUrl = shellOptions.storeUrl ? safeExternalUrl(shellOptions.storeUrl) : null;
+  const storeLink = safeStoreUrl
+    ? `<a class="ty-widget__store-link" href="${escapeHtml(safeStoreUrl)}" target="_blank" rel="noopener noreferrer">Trendyol mağazamızı görüntüleyin ↗</a>`
     : "";
 
   const listClass = shellOptions.carousel ? "ty-widget__list ty-widget__list--carousel" : "ty-widget__list";
@@ -236,6 +246,8 @@ function renderReviewItemsHtml(reviews: ReviewItem[]): string {
   return reviews
     .map((r) => {
       const photos = (r.photoUrls ?? [])
+        .map(safeExternalUrl)
+        .filter((url): url is string => Boolean(url))
         .map((url) => `<img src="${escapeHtml(url)}" alt="" loading="lazy" class="ty-widget__item-photo">`)
         .join("");
       return `
@@ -369,6 +381,8 @@ export async function renderReviewWidget(container: HTMLElement, options: Widget
     modalHeader.innerHTML = `${renderStars(review.rating)}<span class="ty-widget__item-author">${escapeHtml(review.authorName)}</span>`;
     modalComment.textContent = review.comment;
     modalPhotos.innerHTML = (review.photoUrls ?? [])
+      .map(safeExternalUrl)
+      .filter((url): url is string => Boolean(url))
       .map((url) => `<img src="${escapeHtml(url)}" class="ty-widget__modal-photo" data-role="modal-photo" alt="">`)
       .join("");
     detailOverlay.hidden = false;

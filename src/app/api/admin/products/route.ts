@@ -4,22 +4,35 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/api/errors";
 import { getCurrentUser } from "@/lib/auth/currentUser";
+import { requireSameOrigin } from "@/lib/api/csrf";
+import { PRODUCT_MANAGERS, requireRole } from "@/lib/auth/authorization";
+import { writeAuditLog } from "@/lib/audit/log";
 
 function isTrendyolUrl(trendyolUrl: string): boolean {
   try {
-    const { hostname } = new URL(trendyolUrl);
-    return hostname === "trendyol.com" || hostname.endsWith(".trendyol.com");
+    const url = new URL(trendyolUrl);
+    const hostname = url.hostname.toLowerCase();
+    return (
+      url.protocol === "https:" &&
+      !url.username &&
+      !url.password &&
+      (hostname === "trendyol.com" || hostname.endsWith(".trendyol.com"))
+    );
   } catch {
     return false;
   }
 }
 
 function extractProductId(trendyolUrl: string): string | null {
-  const match = trendyolUrl.match(/-p-(\d+)/);
+  const match = new URL(trendyolUrl).pathname.match(/-p-(\d+)(?:$|\/)/);
   return match ? match[1] : null;
 }
 
 const minRatingSchema = z.number().int().min(1).max(5).optional();
+const createProductBodySchema = z.object({
+  trendyolUrl: z.string().trim().max(2048),
+  minRating: minRatingSchema,
+});
 
 export async function GET(request: Request) {
   const currentUser = await getCurrentUser(request);
@@ -60,16 +73,23 @@ export async function POST(request: Request) {
   const currentUser = await getCurrentUser(request);
   if (!currentUser) return jsonError("UNAUTHORIZED", "Giriş yapmanız gerekiyor", 401);
 
+  const authorizationError = requireRole(currentUser, PRODUCT_MANAGERS);
+  if (authorizationError) return authorizationError;
+
+  const csrfError = requireSameOrigin(request);
+  if (csrfError) return csrfError;
+
   let rawBody: unknown;
   try {
     rawBody = await request.json();
   } catch {
     return jsonError("INVALID_BODY", "Geçersiz JSON gövdesi", 400);
   }
-  const { trendyolUrl, minRating: rawMinRating } = rawBody as {
-    trendyolUrl?: unknown;
-    minRating?: unknown;
-  };
+  const parsedBody = createProductBodySchema.safeParse(rawBody);
+  if (!parsedBody.success) {
+    return jsonError("INVALID_BODY", "Geçerli bir ürün URL'si ve minRating değeri gönderin", 400);
+  }
+  const { trendyolUrl, minRating: rawMinRating } = parsedBody.data;
 
   if (typeof trendyolUrl !== "string" || !isTrendyolUrl(trendyolUrl)) {
     return jsonError("INVALID_URL", "Geçerli bir trendyol.com ürün URL'si girin", 400);
@@ -80,11 +100,6 @@ export async function POST(request: Request) {
     return jsonError("INVALID_URL", "Ürün ID'si URL'den çıkarılamadı", 400);
   }
 
-  const minRatingResult = minRatingSchema.safeParse(rawMinRating ?? undefined);
-  if (!minRatingResult.success) {
-    return jsonError("INVALID_BODY", "minRating 1 ile 5 arasında bir tam sayı olmalı", 400);
-  }
-
   try {
     const product = await prisma.product.create({
       data: {
@@ -92,8 +107,16 @@ export async function POST(request: Request) {
         trendyolProductId,
         trendyolUrl,
         name: `Ürün ${trendyolProductId}`,
-        minRating: minRatingResult.data ?? null,
+        minRating: rawMinRating ?? null,
       },
+    });
+    await writeAuditLog({
+      accountId: currentUser.accountId,
+      actorUserId: currentUser.userId,
+      action: "PRODUCT_CREATED",
+      targetType: "product",
+      targetId: product.id,
+      metadata: { trendyolProductId: product.trendyolProductId },
     });
     return NextResponse.json(product, { status: 201 });
   } catch (error) {

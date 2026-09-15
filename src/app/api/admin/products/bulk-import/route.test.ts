@@ -10,7 +10,7 @@ let sessionCookie: string;
 function authedRequest(body: unknown) {
   return new Request("http://localhost/api/admin/products/bulk-import", {
     method: "POST",
-    headers: { cookie: `ty_admin_session=${sessionCookie}` },
+    headers: { cookie: `ty_admin_session=${sessionCookie}`, origin: "http://localhost" },
     body: JSON.stringify(body),
   });
 }

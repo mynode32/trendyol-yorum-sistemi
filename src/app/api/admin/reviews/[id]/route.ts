@@ -5,6 +5,9 @@ import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/api/errors";
 import { syncDisplayedReviews } from "@/lib/scraper/displaySync";
 import { getCurrentUser } from "@/lib/auth/currentUser";
+import { requireSameOrigin } from "@/lib/api/csrf";
+import { PRODUCT_MANAGERS, requireRole } from "@/lib/auth/authorization";
+import { writeAuditLog } from "@/lib/audit/log";
 
 const patchBodySchema = z.object({ isHidden: z.boolean() });
 
@@ -14,6 +17,12 @@ export async function PATCH(
 ) {
   const currentUser = await getCurrentUser(request);
   if (!currentUser) return jsonError("UNAUTHORIZED", "Giriş yapmanız gerekiyor", 401);
+
+  const authorizationError = requireRole(currentUser, PRODUCT_MANAGERS);
+  if (authorizationError) return authorizationError;
+
+  const csrfError = requireSameOrigin(request);
+  if (csrfError) return csrfError;
 
   const { id } = await params;
 
@@ -44,6 +53,14 @@ export async function PATCH(
     // Gizleme/gösterme kararı vitrindeki N yorumu değiştirebilir: bir yorum
     // gizlenince sıradaki uygun yorum onun yerini almalı.
     await syncDisplayedReviews(review.productId);
+    await writeAuditLog({
+      accountId: currentUser.accountId,
+      actorUserId: currentUser.userId,
+      action: "REVIEW_VISIBILITY_CHANGED",
+      targetType: "review",
+      targetId: review.id,
+      metadata: { isHidden },
+    });
     return NextResponse.json(review);
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {

@@ -1,5 +1,5 @@
 import { prisma } from "../db";
-import { hashPassword } from "../auth/password";
+import { hashPassword, PASSWORD_MIN_LENGTH } from "../auth/password";
 
 type AccountDb = Pick<typeof prisma, "account" | "user">;
 
@@ -17,6 +17,10 @@ export async function createAccount(
   password: string,
   accountName: string
 ): Promise<CreateAccountResult> {
+  if (password.length < PASSWORD_MIN_LENGTH) {
+    throw new Error(`Parola en az ${PASSWORD_MIN_LENGTH} karakter olmalı`);
+  }
+
   const account = await db.account.create({ data: { name: accountName } });
   const passwordHash = await hashPassword(password);
   const user = await db.user.create({

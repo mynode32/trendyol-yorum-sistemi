@@ -5,6 +5,9 @@ import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/api/errors";
 import { syncDisplayedReviews } from "@/lib/scraper/displaySync";
 import { getCurrentUser } from "@/lib/auth/currentUser";
+import { requireSameOrigin } from "@/lib/api/csrf";
+import { PRODUCT_MANAGERS, requireRole } from "@/lib/auth/authorization";
+import { writeAuditLog } from "@/lib/audit/log";
 
 const patchBodySchema = z
   .object({
@@ -35,6 +38,12 @@ export async function PATCH(
 ) {
   const currentUser = await getCurrentUser(request);
   if (!currentUser) return jsonError("UNAUTHORIZED", "Giriş yapmanız gerekiyor", 401);
+
+  const authorizationError = requireRole(currentUser, PRODUCT_MANAGERS);
+  if (authorizationError) return authorizationError;
+
+  const csrfError = requireSameOrigin(request);
+  if (csrfError) return csrfError;
 
   const { id } = await params;
 
@@ -75,6 +84,16 @@ export async function PATCH(
     });
     // Vitrin boyutu değiştiyse yeni sınıra göre hemen yeniden hesapla.
     if (maxDisplayedReviews !== undefined) await syncDisplayedReviews(id);
+    await writeAuditLog({
+      accountId: currentUser.accountId,
+      actorUserId: currentUser.userId,
+      action: "PRODUCT_UPDATED",
+      targetType: "product",
+      targetId: product.id,
+      metadata: {
+        fields: Object.keys(parsed.data),
+      },
+    });
     return NextResponse.json(product);
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -96,11 +115,17 @@ export async function DELETE(
   const currentUser = await getCurrentUser(request);
   if (!currentUser) return jsonError("UNAUTHORIZED", "Giriş yapmanız gerekiyor", 401);
 
+  const authorizationError = requireRole(currentUser, PRODUCT_MANAGERS);
+  if (authorizationError) return authorizationError;
+
+  const csrfError = requireSameOrigin(request);
+  if (csrfError) return csrfError;
+
   const { id } = await params;
 
   const owned = await prisma.product.findFirst({
     where: { id, accountId: currentUser.accountId },
-    select: { id: true },
+    select: { id: true, trendyolProductId: true },
   });
   if (!owned) return jsonError("NOT_FOUND", "Ürün bulunamadı", 404);
 
@@ -109,6 +134,16 @@ export async function DELETE(
       prisma.scrapeLog.deleteMany({ where: { productId: id } }),
       prisma.review.deleteMany({ where: { productId: id } }),
       prisma.product.delete({ where: { id } }),
+      prisma.auditLog.create({
+        data: {
+          accountId: currentUser.accountId,
+          actorUserId: currentUser.userId,
+          action: "PRODUCT_DELETED",
+          targetType: "product",
+          targetId: id,
+          metadata: { trendyolProductId: owned.trendyolProductId },
+        },
+      }),
     ]);
     return NextResponse.json({ ok: true });
   } catch (error) {

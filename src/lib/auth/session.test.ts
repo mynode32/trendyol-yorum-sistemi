@@ -8,7 +8,7 @@ describe("session token", () => {
 
   it("creates a token that verifies successfully and carries the user id", () => {
     const token = createSessionToken("user_123");
-    expect(verifySessionToken(token)).toEqual({ userId: "user_123" });
+    expect(verifySessionToken(token)).toEqual({ userId: "user_123", sessionVersion: 0 });
   });
 
   it("rejects a tampered token", () => {
@@ -30,11 +30,11 @@ describe("session token", () => {
       vi.setSystemTime(new Date("2026-09-08T00:00:00Z"));
 
       const token = createSessionToken("user_123");
-      expect(verifySessionToken(token)).toEqual({ userId: "user_123" });
+      expect(verifySessionToken(token)).toEqual({ userId: "user_123", sessionVersion: 0 });
 
       // Süre sınırının hemen altında hâlâ geçerli
       vi.setSystemTime(new Date(Date.now() + MAX_SESSION_AGE_MS - 1000));
-      expect(verifySessionToken(token)).toEqual({ userId: "user_123" });
+      expect(verifySessionToken(token)).toEqual({ userId: "user_123", sessionVersion: 0 });
 
       // Süre sınırı aşıldığında imza doğru olsa bile reddedilir
       vi.setSystemTime(new Date(Date.now() + 2000));

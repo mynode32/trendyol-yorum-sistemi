@@ -12,7 +12,7 @@ let otherAccountId: string;
 let sessionCookie: string;
 
 function authedRequest() {
-  return new Request("http://localhost", { method: "POST", headers: { cookie: `ty_admin_session=${sessionCookie}` } });
+  return new Request("http://localhost", { method: "POST", headers: { cookie: `ty_admin_session=${sessionCookie}`, origin: "http://localhost" } });
 }
 
 describe("POST /api/admin/products/:id/scrape", () => {

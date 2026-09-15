@@ -4,18 +4,27 @@ import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/api/errors";
 import { discoverSellerProductIds } from "@/lib/scraper/trendyolClient";
 import { getCurrentUser } from "@/lib/auth/currentUser";
+import { requireSameOrigin } from "@/lib/api/csrf";
+import { PRODUCT_MANAGERS, requireRole } from "@/lib/auth/authorization";
+import { writeAuditLog } from "@/lib/audit/log";
 
 function isTrendyolUrl(url: string): boolean {
   try {
-    const { hostname } = new URL(url);
-    return hostname === "trendyol.com" || hostname.endsWith(".trendyol.com");
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.toLowerCase();
+    return (
+      parsed.protocol === "https:" &&
+      !parsed.username &&
+      !parsed.password &&
+      (hostname === "trendyol.com" || hostname.endsWith(".trendyol.com"))
+    );
   } catch {
     return false;
   }
 }
 
 const bodySchema = z.object({
-  sellerUrl: z.string(),
+  sellerUrl: z.string().trim().max(2048),
   storeId: z.string().trim().min(1).max(100).optional(),
   minRating: z.number().int().min(1).max(5).optional(),
 });
@@ -23,6 +32,12 @@ const bodySchema = z.object({
 export async function POST(request: Request) {
   const currentUser = await getCurrentUser(request);
   if (!currentUser) return jsonError("UNAUTHORIZED", "Giriş yapmanız gerekiyor", 401);
+
+  const authorizationError = requireRole(currentUser, PRODUCT_MANAGERS);
+  if (authorizationError) return authorizationError;
+
+  const csrfError = requireSameOrigin(request);
+  if (csrfError) return csrfError;
 
   let rawBody: unknown;
   try {
@@ -71,10 +86,19 @@ export async function POST(request: Request) {
     });
   }
 
-  return NextResponse.json({
+  const response = {
     discovered: discoveredIds.length,
     added: newIds.length,
     skipped: discoveredIds.length - newIds.length,
     addedIds: newIds,
+  };
+  await writeAuditLog({
+    accountId: currentUser.accountId,
+    actorUserId: currentUser.userId,
+    action: "BULK_IMPORT_COMPLETED",
+    targetType: "account",
+    targetId: currentUser.accountId,
+    metadata: { discovered: response.discovered, added: response.added, skipped: response.skipped },
   });
+  return NextResponse.json(response);
 }
