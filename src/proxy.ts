@@ -3,9 +3,12 @@ import { verifySessionToken } from "@/lib/auth/session";
 
 // Next'in kendi hydration/RSC script'leri, CSP yanıt başlığındaki nonce'u otomatik
 // okuyup uygular; bu sayede script-src'ten 'unsafe-inline' kaldırılabilir.
-function withCsp(response: NextResponse, nonce: string): NextResponse {
+// Next bu nonce'u response header'ından değil, middleware'in NextResponse.next()'e
+// ilettiği REQUEST header'ından okur — sadece response'a yazmak yeterli değil,
+// aksi halde kendi script'lerine nonce eklemez ve strict-dynamic hepsini bloklar.
+function buildCsp(nonce: string): string {
   const isDev = process.env.NODE_ENV !== "production";
-  const csp = [
+  return [
     "default-src 'self'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -19,20 +22,25 @@ function withCsp(response: NextResponse, nonce: string): NextResponse {
     "font-src 'self' data:",
     "connect-src 'self' https:",
   ].join("; ");
-  response.headers.set("Content-Security-Policy", csp);
-  return response;
 }
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
+  const csp = buildCsp(nonce);
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("Content-Security-Policy", csp);
   const nextInit = { request: { headers: requestHeaders } };
+
+  function withCsp(response: NextResponse): NextResponse {
+    response.headers.set("Content-Security-Policy", csp);
+    return response;
+  }
 
   const isAdminRoute = pathname.startsWith("/admin") || pathname.startsWith("/api/admin");
   if (!isAdminRoute || pathname === "/admin/login" || pathname === "/api/admin/login") {
-    return withCsp(NextResponse.next(nextInit), nonce);
+    return withCsp(NextResponse.next(nextInit));
   }
 
   const token = request.cookies.get("ty_admin_session")?.value;
@@ -44,14 +52,13 @@ export function proxy(request: NextRequest) {
         NextResponse.json(
           { error: { code: "UNAUTHORIZED", message: "Giriş yapmanız gerekiyor" } },
           { status: 401 }
-        ),
-        nonce
+        )
       );
     }
-    return withCsp(NextResponse.redirect(new URL("/admin/login", request.url)), nonce);
+    return withCsp(NextResponse.redirect(new URL("/admin/login", request.url)));
   }
 
-  return withCsp(NextResponse.next(nextInit), nonce);
+  return withCsp(NextResponse.next(nextInit));
 }
 
 export const config = {
