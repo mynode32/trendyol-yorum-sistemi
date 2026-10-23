@@ -115,8 +115,9 @@ function injectStylesOnce(root: ShadowRoot) {
     .ty-widget__list--carousel { overflow: hidden; padding: 6px 0 10px;
       -webkit-mask-image: linear-gradient(to right, transparent, black 32px, black calc(100% - 32px), transparent);
       mask-image: linear-gradient(to right, transparent, black 32px, black calc(100% - 32px), transparent); }
-    .ty-widget__carousel-track { display: flex; gap: 14px; width: max-content;
+    .ty-widget__carousel-track { display: flex; gap: 0; width: max-content;
       animation: ty-widget-scroll 32s linear infinite; }
+    .ty-widget__carousel-group { display: flex; flex: 0 0 auto; gap: 14px; padding-right: 14px; }
     .ty-widget__list--carousel:hover .ty-widget__carousel-track,
     .ty-widget__list--carousel:focus-within .ty-widget__carousel-track { animation-play-state: paused; }
     @keyframes ty-widget-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
@@ -124,6 +125,13 @@ function injectStylesOnce(root: ShadowRoot) {
       padding: 14px 16px; transition: transform 0.18s ease, box-shadow 0.18s ease; }
     .ty-widget__list--carousel .ty-widget__item:hover { transform: translateY(-3px);
       box-shadow: 0 8px 20px rgba(0,0,0,0.14); }
+    @media (max-width: 600px), (prefers-reduced-motion: reduce) {
+      .ty-widget__list--carousel { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain; scroll-snap-type: x mandatory; -webkit-mask-image: none; mask-image: none; }
+      .ty-widget__carousel-track { animation: none; }
+      .ty-widget__carousel-group--clone { display: none; }
+      .ty-widget__list--carousel .ty-widget__item { scroll-snap-align: start; }
+    }
     .ty-widget__item { border: 1px solid #e5e5e5; border-radius: 8px; padding: 10px 12px; }
     .ty-widget__item-stars { display: inline-block; margin-right: 6px; letter-spacing: 1px; }
     .ty-widget__item-stars-filled { color: #ff9500; }
@@ -282,10 +290,10 @@ function renderReviewItems(reviews: ReviewItem[], carousel?: boolean): string {
   }
   const itemsHtml = renderReviewItemsHtml(reviews);
   if (!carousel) return itemsHtml;
-  // Kesintisiz döngü illüzyonu için kart dizisi iki kez tekrarlanıp track %50
-  // kaydırılır — track sonuna gelince başa dönmüş gibi görünür (bkz. CSS
-  // ty-widget-scroll keyframe'i, translateX(-50%)).
-  return `<div class="ty-widget__carousel-track">${itemsHtml}${renderReviewItemsHtml(reviews)}</div>`;
+  // Eşit genişlikte iki grup oluşturulur; böylece track'in yarısı tam olarak
+  // bir gruba karşılık gelir ve animasyon döngüsünde boşluk oluşmaz. Mobilde
+  // kopya gizlenir, kullanıcı yorumları yatay kaydırarak okur.
+  return `<div class="ty-widget__carousel-track"><div class="ty-widget__carousel-group">${itemsHtml}</div><div class="ty-widget__carousel-group ty-widget__carousel-group--clone" aria-hidden="true">${renderReviewItemsHtml(reviews)}</div></div>`;
 }
 
 export async function renderReviewWidget(container: HTMLElement, options: WidgetOptions) {

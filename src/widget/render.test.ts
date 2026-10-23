@@ -635,7 +635,10 @@ describe("renderReviewWidget", () => {
     expect(list?.classList.contains("ty-widget__list--carousel")).toBe(true);
     const track = container.shadowRoot!.querySelector(".ty-widget__carousel-track");
     expect(track).not.toBeNull();
-    // 2 yorum x 2 (kesintisiz döngü için tekrarlanmış) = 4 kart
+    const groups = track!.querySelectorAll(".ty-widget__carousel-group");
+    expect(groups).toHaveLength(2);
+    expect(groups[1].getAttribute("aria-hidden")).toBe("true");
+    // 2 yorum x 2 (masaüstü döngüsü için tekrarlanmış) = 4 kart
     expect(track!.querySelectorAll(".ty-widget__item").length).toBe(4);
     // Kaydırmalı modda sayfalama anlamsız — gösterilmemeli.
     expect(container.shadowRoot!.querySelector(".ty-widget__pagination")).toBeNull();
