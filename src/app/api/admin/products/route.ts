@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth/currentUser";
 import { requireSameOrigin } from "@/lib/api/csrf";
 import { PRODUCT_MANAGERS, requireRole } from "@/lib/auth/authorization";
 import { writeAuditLog } from "@/lib/audit/log";
+import { canAddProduct, PLAN_DEFINITIONS, type AccountPlan } from "@/lib/billing/plans";
 
 function isTrendyolUrl(trendyolUrl: string): boolean {
   try {
@@ -101,6 +102,22 @@ export async function POST(request: Request) {
   }
 
   try {
+    const account = await prisma.account.findUnique({
+      where: { id: currentUser.accountId },
+      select: { plan: true },
+    });
+    if (!account) return jsonError("UNAUTHORIZED", "Hesap bulunamadı", 401);
+
+    const productCount = await prisma.product.count({ where: { accountId: currentUser.accountId } });
+    if (!canAddProduct(account.plan as AccountPlan, productCount)) {
+      const { maxProducts } = PLAN_DEFINITIONS[account.plan as AccountPlan];
+      return jsonError(
+        "PLAN_PRODUCT_LIMIT_REACHED",
+        `Mevcut planınız en fazla ${maxProducts} ürün destekliyor. Planınızı yükselterek devam edebilirsiniz.`,
+        403
+      );
+    }
+
     const product = await prisma.product.create({
       data: {
         accountId: currentUser.accountId,

@@ -15,6 +15,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     email: currentUser.email,
     accountName: currentUser.accountName,
+    accountPlan: currentUser.accountPlan,
     role: currentUser.role,
   });
 }

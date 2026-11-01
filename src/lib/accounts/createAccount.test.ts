@@ -4,7 +4,7 @@ import { createAccount } from "./createAccount";
 function fakeDb() {
   return {
     account: {
-      create: vi.fn(async ({ data }: { data: { name: string } }) => ({
+      create: vi.fn(async ({ data }: { data: { name: string; plan: string } }) => ({
         id: "account-1",
         name: data.name,
       })),
@@ -26,7 +26,7 @@ describe("createAccount", () => {
 
     const result = await createAccount(db as never, "owner@example.com", "s3cret-pass-12", "some-customer");
 
-    expect(db.account.create).toHaveBeenCalledWith({ data: { name: "some-customer" } });
+    expect(db.account.create).toHaveBeenCalledWith({ data: { name: "some-customer", plan: "STARTER" } });
     expect(db.user.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ accountId: "account-1", email: "owner@example.com" }),
     });

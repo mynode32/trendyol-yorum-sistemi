@@ -15,9 +15,18 @@ datasource db {
 model Account {
   id        String    @id @default(cuid())
   name      String
+  // Mevcut müşteriler migration sırasında LEGACY planında kalır; bu plan
+  // kota uygulamaz. Yeni hesaplar createAccount üzerinden STARTER alır.
+  plan      AccountPlan @default(LEGACY)
   createdAt DateTime  @default(now())
   users     User[]
   products  Product[]
+}
+
+enum AccountPlan {
+  LEGACY
+  STARTER
+  PRO
 }
 
 // Bir hesaba giriş yapabilen kişi. Account'tan ayrı tutulur ki ileride aynı

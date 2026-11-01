@@ -32,7 +32,12 @@ describe("GET /api/admin/me", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body).toEqual({ email: "owner@example.com", accountName: "some-customer", role: "OWNER" });
+    expect(body).toEqual({
+      email: "owner@example.com",
+      accountName: "some-customer",
+      accountPlan: "LEGACY",
+      role: "OWNER",
+    });
   });
 
   it("returns 401 without a valid session cookie", async () => {

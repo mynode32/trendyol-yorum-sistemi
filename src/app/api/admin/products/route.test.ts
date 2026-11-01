@@ -62,6 +62,36 @@ describe("/api/admin/products", () => {
     expect(body.accountId).toBe(accountId);
   });
 
+  it("blocks a STARTER account after its product quota without affecting a legacy account", async () => {
+    await prisma.account.update({ where: { id: accountId }, data: { plan: "STARTER" } });
+    await prisma.product.createMany({
+      data: Array.from({ length: 10 }, (_, index) => ({
+        accountId,
+        trendyolProductId: `starter-${index}`,
+        trendyolUrl: "https://x",
+        name: `Ürün ${index}`,
+      })),
+    });
+
+    const limitedResponse = await POST(
+      authedRequest("http://localhost/api/admin/products", {
+        method: "POST",
+        body: JSON.stringify({ trendyolUrl: "https://www.trendyol.com/marka/urun-p-999999999" }),
+      })
+    );
+    expect(limitedResponse.status).toBe(403);
+    expect((await limitedResponse.json()).error.code).toBe("PLAN_PRODUCT_LIMIT_REACHED");
+
+    await prisma.account.update({ where: { id: accountId }, data: { plan: "LEGACY" } });
+    const legacyResponse = await POST(
+      authedRequest("http://localhost/api/admin/products", {
+        method: "POST",
+        body: JSON.stringify({ trendyolUrl: "https://www.trendyol.com/marka/urun-p-999999999" }),
+      })
+    );
+    expect(legacyResponse.status).toBe(201);
+  });
+
   it("lists only the logged-in account's products", async () => {
     await prisma.product.create({
       data: { accountId, trendyolProductId: "1", trendyolUrl: "https://x", name: "Ürün 1" },

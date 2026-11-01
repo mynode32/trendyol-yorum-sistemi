@@ -4,13 +4,20 @@ import { adminFetch } from "@/lib/adminFetch";
 import { useToast } from "../_components/Toast";
 
 type Role = "OWNER" | "ADMIN" | "VIEWER";
-type Me = { email: string; accountName: string; role: Role };
+type AccountPlan = "LEGACY" | "STARTER" | "PRO";
+type Me = { email: string; accountName: string; accountPlan: AccountPlan; role: Role };
 type Member = { id: string; email: string; role: Role; createdAt: string };
 
 const ROLE_LABELS: Record<Role, string> = {
   OWNER: "Hesap sahibi",
   ADMIN: "Yönetici",
   VIEWER: "Görüntüleyici",
+};
+
+const PLAN_LABELS: Record<AccountPlan, { label: string; detail: string }> = {
+  LEGACY: { label: "Mevcut müşteri", detail: "Ürün kotası uygulanmaz." },
+  STARTER: { label: "Başlangıç", detail: "En fazla 10 takip ürünü." },
+  PRO: { label: "Pro", detail: "En fazla 50 takip ürünü." },
 };
 
 function formatDate(value: string): string {
@@ -206,6 +213,14 @@ export default function SettingsPage() {
           </button>
         </form>
       </div>
+
+      {me && <div className="card" style={{ marginBottom: 24, maxWidth: 420 }}>
+        <h2 style={{ fontSize: 16, marginBottom: 4 }}>Planınız</h2>
+        <p style={{ margin: 0, fontWeight: 600 }}>{PLAN_LABELS[me.accountPlan].label}</p>
+        <p style={{ margin: "6px 0 0", color: "var(--text-muted)", fontSize: 13 }}>
+          {PLAN_LABELS[me.accountPlan].detail}
+        </p>
+      </div>}
 
       {me?.role === "OWNER" && <div className="card" style={{ maxWidth: 560 }}>
         <h2 style={{ fontSize: 16, marginBottom: 4 }}>Ekip Üyeleri</h2>

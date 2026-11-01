@@ -8,6 +8,7 @@ export type CurrentUser = {
   email: string;
   accountId: string;
   accountName: string;
+  accountPlan: "LEGACY" | "STARTER" | "PRO";
   role: "OWNER" | "ADMIN" | "VIEWER";
 };
 
@@ -41,6 +42,7 @@ export async function getCurrentUser(request: Request): Promise<CurrentUser | nu
     email: user.email,
     accountId: user.accountId,
     accountName: user.account.name,
+    accountPlan: user.account.plan,
     role: user.role,
   };
 }
