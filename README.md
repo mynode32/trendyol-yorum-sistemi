@@ -27,7 +27,14 @@ kendi email/şifresiyle giriş yapar, sadece kendi ürünlerini görür.
 
 ### Yeni müşteri ekleme
 
-1. **Hesabı oluştur** (bu bilgisayarda, production `DIRECT_URL`'i ile):
+1. **Hesabı oluştur** — iki güvenli yol vardır:
+   - Davetli onboarding (önerilen):
+     ```bash
+     npm run invite:create -- <email> <hesap-adı> <https://uygulama-adresi> [STARTER|PRO]
+     ```
+     Komutun ürettiği tek kullanımlık bağlantı 7 gün geçerlidir. Müşteri kendi
+     şifresini belirler ve doğrudan paneline girer.
+   - Operatör tarafından doğrudan hesap açma (yalnız destek/geri dönüş için):
    ```bash
    npx tsx scripts/create-account.ts <email> <şifre> <hesap-adı>
    ```
