@@ -22,9 +22,39 @@ type Product = {
 
 type Summary = {
   accountName: string;
+  accountPlan: "LEGACY" | "STARTER" | "PRO";
   averageRating: number | null;
   newReviewsLast7Days: number;
 };
+
+function OnboardingChecklist({ products, onAddProduct }: { products: Product[]; onAddProduct: () => void }) {
+  const productAdded = products.length > 0;
+  const firstScrapeDone = products.some((product) => product.lastScrapedAt !== null);
+
+  return (
+    <section className="card" style={{ marginBottom: 24, maxWidth: 760 }} aria-labelledby="onboarding-title">
+      <h2 id="onboarding-title" style={{ fontSize: 16, marginBottom: 4 }}>Kurulum adımları</h2>
+      <p style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 16 }}>
+        İlk ürününüzü ekleyin, planlanan taramayı bekleyin ve ardından widget kodunu sitenize yerleştirin.
+      </p>
+      <ol style={{ display: "flex", flexDirection: "column", gap: 10, paddingLeft: 20, margin: 0 }}>
+        <li>
+          <strong>{productAdded ? "Tamamlandı" : "Ürün ekleyin"}</strong>
+          <span style={{ color: "var(--text-muted)" }}> — {productAdded ? `${products.length} ürün takipte.` : "Bir Trendyol ürün URL’si ile başlayın."}</span>
+          {!productAdded && <button type="button" className="btn btn-secondary btn-sm" style={{ marginLeft: 10 }} onClick={onAddProduct}>Ürün ekle</button>}
+        </li>
+        <li>
+          <strong>{firstScrapeDone ? "İlk tarama tamamlandı" : "İlk taramayı bekleyin"}</strong>
+          <span style={{ color: "var(--text-muted)" }}> — {firstScrapeDone ? "Yorum verileri ürün listenizde görünüyor." : "Takipteki ürünler planlanan tarama sırasında işlenir."}</span>
+        </li>
+        <li>
+          <strong>Widget kodunu yerleştirin</strong>
+          <span style={{ color: "var(--text-muted)" }}> — Ürün satırındaki “Widget kodu” düğmesinden kopyalayın.</span>
+        </li>
+      </ol>
+    </section>
+  );
+}
 
 type StatusFilter = "all" | "tracked" | "stopped" | "unmatched";
 type SortKey = "name" | "lastScrapedAt";
@@ -370,6 +400,7 @@ export default function ProductsPage() {
 
   const trackedCount = products.filter((p) => p.isTracked).length;
   const displayedReviewTotal = products.reduce((sum, p) => sum + p.displayedReviewCount, 0);
+  const shouldShowOnboarding = summary?.accountPlan !== "LEGACY" && !products.some((p) => p.lastScrapedAt !== null);
 
   return (
     <div className="admin-page">
@@ -410,6 +441,10 @@ export default function ProductsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {!loading && shouldShowOnboarding && (
+        <OnboardingChecklist products={products} onAddProduct={() => document.getElementById("trendyolUrl")?.focus()} />
       )}
 
       {!loading && products.length > 0 && (

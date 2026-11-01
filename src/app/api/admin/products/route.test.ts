@@ -183,6 +183,7 @@ describe("/api/admin/products", () => {
     const body = await response.json();
 
     expect(body.summary.accountName).toBe("test-account");
+    expect(body.summary.accountPlan).toBe("LEGACY");
     expect(body.summary.averageRating).toBe(3);
     expect(body.summary.newReviewsLast7Days).toBe(3);
   });

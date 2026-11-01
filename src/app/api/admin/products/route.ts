@@ -64,6 +64,7 @@ export async function GET(request: Request) {
     data,
     summary: {
       accountName: currentUser.accountName,
+      accountPlan: currentUser.accountPlan,
       averageRating: ratingAgg._avg.rating,
       newReviewsLast7Days,
     },
