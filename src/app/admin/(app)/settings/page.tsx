@@ -5,7 +5,13 @@ import { useToast } from "../_components/Toast";
 
 type Role = "OWNER" | "ADMIN" | "VIEWER";
 type AccountPlan = "LEGACY" | "STARTER" | "PRO";
-type Me = { email: string; accountName: string; accountPlan: AccountPlan; role: Role };
+type Me = {
+  email: string;
+  accountName: string;
+  accountPlan: AccountPlan;
+  productUsage: { used: number; limit: number | null };
+  role: Role;
+};
 type Member = { id: string; email: string; role: Role; createdAt: string };
 
 const ROLE_LABELS: Record<Role, string> = {
@@ -219,6 +225,9 @@ export default function SettingsPage() {
         <p style={{ margin: 0, fontWeight: 600 }}>{PLAN_LABELS[me.accountPlan].label}</p>
         <p style={{ margin: "6px 0 0", color: "var(--text-muted)", fontSize: 13 }}>
           {PLAN_LABELS[me.accountPlan].detail}
+        </p>
+        <p style={{ margin: "6px 0 0", color: "var(--text-muted)", fontSize: 13 }}>
+          Takip edilen ürün: {me.productUsage.used}{me.productUsage.limit === null ? "" : ` / ${me.productUsage.limit}`}
         </p>
       </div>}
 

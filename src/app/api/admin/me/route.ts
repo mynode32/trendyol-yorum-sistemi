@@ -7,15 +7,20 @@ import { hashPassword, PASSWORD_MIN_LENGTH, verifyPassword } from "@/lib/auth/pa
 import { requireSameOrigin } from "@/lib/api/csrf";
 import { createSessionToken, MAX_SESSION_AGE_MS } from "@/lib/auth/session";
 import { writeAuditLog } from "@/lib/audit/log";
+import { PLAN_DEFINITIONS } from "@/lib/billing/plans";
 
 export async function GET(request: Request) {
   const currentUser = await getCurrentUser(request);
   if (!currentUser) return jsonError("UNAUTHORIZED", "Giriş yapmanız gerekiyor", 401);
 
+  const productCount = await prisma.product.count({ where: { accountId: currentUser.accountId } });
+  const maxProducts = PLAN_DEFINITIONS[currentUser.accountPlan].maxProducts;
+
   return NextResponse.json({
     email: currentUser.email,
     accountName: currentUser.accountName,
     accountPlan: currentUser.accountPlan,
+    productUsage: { used: productCount, limit: maxProducts },
     role: currentUser.role,
   });
 }

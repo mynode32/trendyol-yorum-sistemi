@@ -36,6 +36,7 @@ describe("GET /api/admin/me", () => {
       email: "owner@example.com",
       accountName: "some-customer",
       accountPlan: "LEGACY",
+      productUsage: { used: 0, limit: null },
       role: "OWNER",
     });
   });

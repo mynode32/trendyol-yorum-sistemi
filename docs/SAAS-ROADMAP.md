@@ -28,9 +28,10 @@ gerçek müşteri verisi testte kullanılmaz.
 
 ## Faz 3 — Paket yönetimi
 
-- Plan kullanımını (ürün sayısı / kota) panelde göster.
-- Plan yükseltme talebini önce manuel operasyon olarak al; ödeme entegrasyonu
-  olmadan otomatik plan değiştirme yapma.
+- Plan kullanımı (ürün sayısı / kota) panelde gösterilir.
+- Plan değişikliği önce yalnız güvenli operatör komutuyla yapılır; mevcut ürün
+  sayısından daha düşük kota seçilemez. Ödeme entegrasyonu olmadan otomatik
+  plan değiştirme yapılmaz.
 - Kota denetimlerini eşzamanlı ürün ekleme durumuna karşı transaction/lock
   tasarımıyla ayrıca güçlendir.
 

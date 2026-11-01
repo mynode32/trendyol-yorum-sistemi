@@ -19,3 +19,8 @@ export function canAddProduct(plan: AccountPlan, currentProductCount: number): b
   const { maxProducts } = PLAN_DEFINITIONS[plan];
   return maxProducts === null || currentProductCount < maxProducts;
 }
+
+export function canUsePlanForProductCount(plan: AccountPlan, productCount: number): boolean {
+  const { maxProducts } = PLAN_DEFINITIONS[plan];
+  return maxProducts === null || productCount <= maxProducts;
+}

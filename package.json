@@ -15,6 +15,7 @@
     "scheduler:start": "tsx scripts/run-scheduler.ts",
     "scheduler:run-once": "tsx scripts/run-scheduled-scrape-once.ts",
     "invite:create": "tsx scripts/create-signup-invite.ts",
+    "plan:change": "tsx scripts/change-account-plan.ts",
     "bulk-import": "tsx scripts/bulk-import-from-seller.ts"
   },
   "dependencies": {
