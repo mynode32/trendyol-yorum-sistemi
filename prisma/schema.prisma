@@ -23,6 +23,22 @@ model Account {
   products  Product[]
 }
 
+// Platform yöneticisinin oluşturduğu tek kullanımlık müşteri daveti. Ham token
+// asla saklanmaz; yalnız SHA-256 özeti tutulur.
+model SignupInvite {
+  id          String      @id @default(cuid())
+  email       String
+  accountName String
+  plan        AccountPlan @default(STARTER)
+  tokenHash   String      @unique
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime    @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
+}
+
 enum AccountPlan {
   LEGACY
   STARTER

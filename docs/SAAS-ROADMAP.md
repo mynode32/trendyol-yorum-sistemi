@@ -18,8 +18,8 @@ production ortamında uygulanır. Mevcut müşteri hesabının `LEGACY` kaldığ
 
 ## Faz 2 — Davetli onboarding
 
-- Herkese açık kayıt açılmadan, owner'ın davet ettiği müşteri için hesap açma
-  akışı hazırlanır.
+- Herkese açık kayıt açılmadan, platform yöneticisinin komutla oluşturduğu
+  7 günlük, tek kullanımlık davet bağlantısıyla müşteri hesabı açılır.
 - Yeni müşteri ürün URL'sini ekler, mağaza etiketi verir ve widget kodunu alır.
 - İlk tarama ve widget doğrulaması açık durum mesajlarıyla izlenir.
 
